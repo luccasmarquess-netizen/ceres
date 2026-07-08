@@ -6,113 +6,172 @@
 <title>Ceres - Lista de Mercado</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png" type="image/png">
-<meta name="theme-color" content="#111111">
+<meta name="theme-color" content="#1c1912">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --solo: #1c1912;
+    --superficie: #262115;
+    --superficie-alta: #2f2818;
+    --linha: #3d3423;
+    --trigo: #d3a24c;
+    --trigo-claro: #e8bd6e;
+    --creme: #f1e6cf;
+    --creme-fosco: #a89a7a;
+    --ferrugem: #a8502f;
+    --ferrugem-clara: #c96a45;
+  }
   * { box-sizing: border-box; }
   body {
-    background: #111;
-    color: #eee;
-    font-family: -apple-system, Roboto, Arial, sans-serif;
+    background: var(--solo);
+    color: var(--creme);
+    font-family: 'Inter', -apple-system, Roboto, Arial, sans-serif;
     margin: 0;
     padding: 16px;
-    padding-bottom: 40px;
+    padding-bottom: 96px;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  header .glifo svg {
+    width: 26px;
+    height: 26px;
   }
   h1 {
-    font-size: 1.3rem;
-    margin-bottom: 4px;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 1.7rem;
+    margin: 0;
+    color: var(--creme);
+    letter-spacing: 0.01em;
   }
   .total-bar {
     position: sticky;
     top: 0;
-    background: #1c1c1c;
-    border: 1px solid #333;
-    border-radius: 10px;
-    padding: 12px 16px;
+    background: var(--superficie);
+    border: 1px solid var(--linha);
+    border-radius: 14px;
+    padding: 14px 18px;
     margin-bottom: 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 1.1rem;
+    font-size: 1rem;
     z-index: 10;
   }
+  .total-bar .rotulo {
+    color: var(--creme-fosco);
+    font-size: 0.85rem;
+  }
   .total-bar .valor {
-    font-weight: bold;
-    font-size: 1.4rem;
-    color: #4ade80;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    color: var(--trigo-claro);
   }
   .add-bar {
     display: flex;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
     flex-wrap: wrap;
   }
   .add-bar input[type="text"] {
     flex: 1;
-    padding: 10px 12px;
-    border-radius: 8px;
-    border: 1px solid #444;
-    background: #1c1c1c;
-    color: #eee;
+    padding: 11px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--linha);
+    background: var(--superficie);
+    color: var(--creme);
     font-size: 1rem;
     min-width: 120px;
+    font-family: inherit;
+  }
+  .add-bar input[type="text"]::placeholder {
+    color: var(--creme-fosco);
   }
   .add-bar select {
-    padding: 10px 8px;
-    border-radius: 8px;
-    border: 1px solid #444;
-    background: #1c1c1c;
-    color: #eee;
-    font-size: 0.95rem;
+    padding: 11px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--linha);
+    background: var(--superficie);
+    color: var(--creme);
+    font-size: 0.9rem;
+    font-family: inherit;
   }
   .add-bar button {
-    padding: 10px 16px;
-    border-radius: 8px;
+    padding: 11px 18px;
+    border-radius: 10px;
     border: none;
-    background: #4ade80;
-    color: #111;
-    font-weight: bold;
-    font-size: 1rem;
+    background: var(--trigo);
+    color: #1c1912;
+    font-weight: 700;
+    font-size: 0.95rem;
     cursor: pointer;
     flex-shrink: 0;
+    transition: background 0.15s ease;
+  }
+  .add-bar button:hover {
+    background: var(--trigo-claro);
   }
   .categoria-titulo {
-    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.78rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #4ade80;
-    margin: 18px 0 6px;
-    padding-bottom: 4px;
-    border-bottom: 1px solid #2a2a2a;
+    letter-spacing: 0.08em;
+    color: var(--trigo);
+    margin: 22px 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--linha);
   }
-  .categoria-titulo:first-child {
+  .categoria-titulo svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+  .categoria-titulo:first-of-type {
     margin-top: 0;
   }
   ul {
     list-style: none;
     padding: 0;
-    margin: 0;
+    margin: 0 0 4px;
   }
   li {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 6px;
-    border-bottom: 1px solid #2a2a2a;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: var(--superficie);
+    border: 1px solid var(--linha);
+    border-radius: 12px;
     flex-wrap: wrap;
+  }
+  li.checked {
+    opacity: 0.55;
   }
   li.checked .nome {
     text-decoration: line-through;
-    color: #777;
+    color: var(--creme-fosco);
   }
   input[type="checkbox"] {
     width: 22px;
     height: 22px;
     flex-shrink: 0;
-    accent-color: #4ade80;
+    accent-color: var(--trigo);
+    margin-top: 2px;
   }
   .nome {
     flex: 1 1 100%;
@@ -121,101 +180,153 @@
     cursor: text;
     padding: 2px 4px;
     border-radius: 4px;
+    font-weight: 500;
   }
   .nome:hover {
-    background: #1f1f1f;
+    background: var(--superficie-alta);
   }
   .nome-input {
     flex: 1 1 100%;
     font-size: 1rem;
     min-width: 90px;
-    padding: 2px 4px;
-    border-radius: 4px;
-    border: 1px solid #4ade80;
-    background: #0f0f0f;
-    color: #eee;
+    padding: 4px 6px;
+    border-radius: 6px;
+    border: 1px solid var(--trigo);
+    background: var(--solo);
+    color: var(--creme);
     font-family: inherit;
   }
   .campos {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-left: 30px;
+    gap: 8px;
+    margin-left: 32px;
     flex-wrap: wrap;
+    width: 100%;
   }
   .campo-grupo {
     display: flex;
     align-items: center;
-    gap: 3px;
+    gap: 4px;
   }
   .campo-grupo span {
-    color: #999;
-    font-size: 0.85rem;
+    color: var(--creme-fosco);
+    font-size: 0.8rem;
   }
   input[type="number"] {
-    padding: 6px 8px;
-    border-radius: 6px;
-    border: 1px solid #444;
-    background: #0f0f0f;
-    color: #eee;
-    font-size: 0.95rem;
+    padding: 7px 8px;
+    border-radius: 7px;
+    border: 1px solid var(--linha);
+    background: var(--solo);
+    color: var(--creme);
+    font-size: 0.9rem;
+    font-family: inherit;
   }
   input.qtd {
-    width: 55px;
+    width: 52px;
   }
   input.preco {
-    width: 78px;
+    width: 74px;
   }
   .subtotal {
     margin-left: auto;
     font-size: 0.9rem;
-    color: #4ade80;
+    color: var(--trigo-claro);
     font-weight: 600;
-    min-width: 70px;
+    min-width: 68px;
     text-align: right;
   }
   .remover {
     background: none;
     border: none;
-    color: #ef4444;
-    font-size: 1.3rem;
+    color: var(--ferrugem-clara);
+    font-size: 1.2rem;
     cursor: pointer;
-    padding: 0 4px;
+    padding: 2px 4px;
     flex-shrink: 0;
   }
   .footer-info {
-    margin-top: 16px;
-    font-size: 0.85rem;
-    color: #777;
+    margin-top: 18px;
+    font-size: 0.8rem;
+    color: var(--creme-fosco);
     text-align: center;
+    line-height: 1.5;
   }
-  .reset-btn {
-    display: block;
-    margin: 20px auto 0;
-    padding: 10px 20px;
+
+  .action-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--superficie);
+    border-top: 1px solid var(--linha);
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 8px calc(10px + env(safe-area-inset-bottom));
+    z-index: 50;
+  }
+  .action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    background: none;
+    border: none;
+    color: var(--creme);
+    font-size: 0.7rem;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 10px;
+    font-family: inherit;
+  }
+  .action-btn:active {
+    background: var(--superficie-alta);
+  }
+  .action-btn svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .mais-menu {
+    position: fixed;
+    bottom: 70px;
+    right: 12px;
+    background: var(--superficie-alta);
+    border: 1px solid var(--linha);
+    border-radius: 12px;
+    padding: 6px;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 60;
+    min-width: 220px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .mais-menu.aberto {
+    display: flex;
+  }
+  .mais-menu button {
+    text-align: left;
+    padding: 10px 12px;
     border-radius: 8px;
-    border: 1px solid #444;
-    background: #1c1c1c;
-    color: #ccc;
+    border: none;
+    background: none;
+    color: var(--creme);
     font-size: 0.9rem;
     cursor: pointer;
+    font-family: inherit;
   }
-  .import-btn {
-    display: inline-block;
-    padding: 10px 14px;
-    border-radius: 8px;
-    border: 1px solid #444;
-    background: #1c1c1c;
-    color: #ccc;
-    font-size: 0.9rem;
-    cursor: pointer;
-    margin-bottom: 12px;
-    margin-right: 8px;
+  .mais-menu button:hover {
+    background: var(--superficie);
   }
+  .mais-menu button.perigo {
+    color: var(--ferrugem-clara);
+  }
+
   .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.7);
+    background: rgba(15,13,8,0.75);
     display: none;
     align-items: flex-start;
     justify-content: center;
@@ -227,16 +338,19 @@
     display: flex;
   }
   .modal {
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 12px;
+    background: var(--superficie);
+    border: 1px solid var(--linha);
+    border-radius: 14px;
     padding: 18px;
     width: 100%;
     max-width: 480px;
   }
   .modal h2 {
-    font-size: 1.05rem;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.15rem;
     margin: 0 0 12px;
+    color: var(--trigo-claro);
   }
   .modal-acoes-topo {
     display: flex;
@@ -245,23 +359,24 @@
     flex-wrap: wrap;
   }
   .modal-acoes-topo button, .modal-acoes-topo label {
-    padding: 8px 12px;
+    padding: 9px 12px;
     border-radius: 8px;
-    border: 1px solid #444;
-    background: #222;
-    color: #ddd;
+    border: 1px solid var(--linha);
+    background: var(--superficie-alta);
+    color: var(--creme);
     font-size: 0.85rem;
     cursor: pointer;
     display: inline-block;
+    font-family: inherit;
   }
   .modal textarea {
     width: 100%;
     min-height: 100px;
     padding: 10px;
     border-radius: 8px;
-    border: 1px solid #444;
-    background: #0f0f0f;
-    color: #eee;
+    border: 1px solid var(--linha);
+    background: var(--solo);
+    color: var(--creme);
     font-family: inherit;
     font-size: 0.95rem;
     margin-bottom: 10px;
@@ -269,14 +384,14 @@
   }
   .modal-status {
     font-size: 0.85rem;
-    color: #4ade80;
+    color: var(--trigo-claro);
     margin-bottom: 8px;
     min-height: 1.1em;
   }
   .preview-lista {
     max-height: 220px;
     overflow-y: auto;
-    border: 1px solid #2a2a2a;
+    border: 1px solid var(--linha);
     border-radius: 8px;
     margin-bottom: 12px;
   }
@@ -285,7 +400,7 @@
     align-items: center;
     gap: 8px;
     padding: 8px 10px;
-    border-bottom: 1px solid #2a2a2a;
+    border-bottom: 1px solid var(--linha);
     font-size: 0.95rem;
   }
   .preview-item:last-child {
@@ -294,8 +409,9 @@
   .preview-item input[type="checkbox"] {
     width: 18px;
     height: 18px;
-    accent-color: #4ade80;
+    accent-color: var(--trigo);
     flex-shrink: 0;
+    margin-top: 0;
   }
   .modal-rodape {
     display: flex;
@@ -306,53 +422,79 @@
   .modal-rodape select {
     padding: 8px;
     border-radius: 8px;
-    border: 1px solid #444;
-    background: #1c1c1c;
-    color: #eee;
+    border: 1px solid var(--linha);
+    background: var(--solo);
+    color: var(--creme);
+    font-family: inherit;
   }
   .modal-rodape button {
     padding: 10px 16px;
     border-radius: 8px;
     border: none;
-    font-weight: bold;
+    font-weight: 700;
     cursor: pointer;
+    font-family: inherit;
   }
   .btn-confirmar {
-    background: #4ade80;
-    color: #111;
+    background: var(--trigo);
+    color: #1c1912;
   }
   .btn-cancelar {
-    background: #333;
-    color: #ccc;
+    background: var(--superficie-alta);
+    color: var(--creme-fosco);
   }
 </style>
 </head>
 <body>
 
-<h1>🌾 Ceres</h1>
+<header>
+  <span class="glifo">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 3 L12 20" stroke="#d3a24c" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M12 5 L8.5 7 M12 5 L15.5 7" stroke="#d3a24c" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M12 8.3 L8 10.6 M12 8.3 L16 10.6" stroke="#d3a24c" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M12 11.6 L8 13.9 M12 11.6 L16 13.9" stroke="#d3a24c" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M12 14.9 L8.5 17 M12 14.9 L15.5 17" stroke="#d3a24c" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M12 2 L10.3 4.3 L13.7 4.3 Z" fill="#d3a24c"/>
+    </svg>
+  </span>
+  <h1>Ceres</h1>
+</header>
 
 <div class="total-bar">
-  <span id="contagem">0 de 0 marcados</span>
+  <span class="rotulo" id="contagem">0 de 0 marcados</span>
   <span class="valor">R$ <span id="total">0,00</span></span>
 </div>
 
 <div class="add-bar">
   <input type="text" id="novoItem" placeholder="Adicionar item...">
   <select id="novaCategoria"></select>
-  <button onclick="adicionarItem()">+ Add</button>
-</div>
-
-<div>
-  <button class="import-btn" onclick="abrirImportacao()">📷 Foto ou colar lista</button>
-  <button class="import-btn" onclick="abrirAssistenteIA()">🤖 Ajuda a escolher</button>
+  <button onclick="adicionarItem()">Adicionar</button>
 </div>
 
 <div id="lista"></div>
 
-<button class="reset-btn" onclick="desmarcarTudo()">Desmarcar todos (nova compra)</button>
-<button class="reset-btn" onclick="novaListaZerada()" style="border-color:#ef4444; color:#ef4444;">🗑️ Nova lista (apagar tudo)</button>
+<div class="footer-info">Clique no nome do item para editar. Tudo fica salvo neste navegador.</div>
 
-<div class="footer-info">Marque, ajuste quantidade e valor unitário — o subtotal e total somam automático. Clique no nome do item para editar. Tudo fica salvo no seu navegador.</div>
+<div class="action-bar">
+  <button class="action-btn" onclick="abrirImportacao()">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z" stroke="#f1e6cf" stroke-width="1.5" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="3" stroke="#f1e6cf" stroke-width="1.5"/></svg>
+    Foto / colar
+  </button>
+  <button class="action-btn" onclick="abrirAssistenteIA()">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" stroke="#f1e6cf" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="12" r="3" stroke="#f1e6cf" stroke-width="1.5"/></svg>
+    Ajuda a escolher
+  </button>
+  <button class="action-btn" onclick="alternarMenuMais()">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="12" r="1.6" fill="#f1e6cf"/><circle cx="12" cy="12" r="1.6" fill="#f1e6cf"/><circle cx="19" cy="12" r="1.6" fill="#f1e6cf"/></svg>
+    Mais
+  </button>
+</div>
+
+<div class="mais-menu" id="menuMais">
+  <button onclick="desmarcarTudo(); alternarMenuMais();">Desmarcar todos (nova compra)</button>
+  <button class="perigo" onclick="novaListaZerada(); alternarMenuMais();">Apagar tudo e começar do zero</button>
+</div>
 
 <div class="modal-overlay" id="modalImportacao">
   <div class="modal">
@@ -360,7 +502,7 @@
     <div class="modal-acoes-topo">
       <label for="fotoInput">📷 Tirar foto / escolher imagem</label>
       <input type="file" id="fotoInput" accept="image/*" capture="environment" style="display:none">
-      <button onclick="processarTexto()">🔎 Processar texto abaixo</button>
+      <button onclick="processarTexto()">Processar texto abaixo</button>
     </div>
     <div class="modal-status" id="modalStatus"></div>
     <textarea id="textoImportacao" placeholder="Cole aqui o texto de uma mensagem, ou tire uma foto acima..."></textarea>
@@ -377,6 +519,8 @@
 
 <script>
   const STORAGE_KEY = "lista_mercado_v1";
+
+  const ICONE_ESPIGA = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3 L12 20" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M12 5 L8.5 7 M12 5 L15.5 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M12 8.3 L8 10.6 M12 8.3 L16 10.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M12 11.6 L8 13.9 M12 11.6 L16 13.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
 
   const CATEGORIAS = [
     "Hortifruti",
@@ -419,7 +563,6 @@
     if (salvo) {
       try {
         const parsed = JSON.parse(salvo);
-        // migração: garante que itens antigos sem categoria recebam "Outros"
         return parsed.map(item => ({ categoria: "Outros", ...item }));
       } catch (e) { /* segue pro default */ }
     }
@@ -453,6 +596,7 @@
   let itensPendentes = [];
 
   function abrirImportacao() {
+    fecharMenuMais();
     document.getElementById("modalImportacao").classList.add("aberto");
     document.getElementById("textoImportacao").value = "";
     document.getElementById("modalStatus").textContent = "";
@@ -462,6 +606,14 @@
 
   function fecharImportacao() {
     document.getElementById("modalImportacao").classList.remove("aberto");
+  }
+
+  function alternarMenuMais() {
+    document.getElementById("menuMais").classList.toggle("aberto");
+  }
+
+  function fecharMenuMais() {
+    document.getElementById("menuMais").classList.remove("aberto");
   }
 
   const API_KEY_STORAGE = "ceres_groq_key";
@@ -481,6 +633,7 @@
   }
 
   async function abrirAssistenteIA() {
+    fecharMenuMais();
     const chave = obterChaveAPI();
     if (!chave) return;
 
@@ -508,7 +661,7 @@
           messages: [
             {
               role: "user",
-              content: `Você ajuda alguém indeciso a montar uma lista de compras de mercado no Brasil. Pergunta da pessoa: "${pergunta}". Responda APENAS com uma lista de itens sugeridos, um por linha, no formato "Nome do item | Categoria". A categoria deve ser exatamente uma destas: ${CATEGORIAS.join(", ")}. Sem numeração, sem explicação, sem texto adicional. Máximo 6 itens.`
+              content: "Você ajuda alguém indeciso a montar uma lista de compras de mercado no Brasil. Pergunta da pessoa: \"" + pergunta + "\". Responda APENAS com uma lista de itens sugeridos, um por linha, no formato \"Nome do item | Categoria\". A categoria deve ser exatamente uma destas: " + CATEGORIAS.join(", ") + ". Sem numeração, sem explicação, sem texto adicional. Máximo 6 itens."
             }
           ]
         })
@@ -539,7 +692,6 @@
   }
 
   function limparLinha(linha) {
-    // remove bullets, números de lista, hífens e espaços extras no começo
     return linha
       .replace(/^[\s•\-–—*·]+/, "")
       .replace(/^\d+[\.\)]\s*/, "")
@@ -550,7 +702,6 @@
     const linha = limparLinha(linhaCrua);
     if (!linha) return null;
 
-    // reconhece formato "Nome | Categoria" vindo da IA
     const partes = linha.split("|").map(p => p.trim());
     if (partes.length === 2 && CATEGORIAS.includes(partes[1])) {
       return { nome: partes[0], categoria: partes[1] };
@@ -581,13 +732,12 @@
       const div = document.createElement("div");
       div.className = "preview-item";
       const tagCategoria = item.categoria
-        ? `<span style="color:#4ade80; font-size:0.8rem; margin-left:auto;">${item.categoria}</span>`
+        ? '<span style="color:var(--trigo-claro); font-size:0.8rem; margin-left:auto;">' + item.categoria + '</span>'
         : "";
-      div.innerHTML = `
-        <input type="checkbox" checked data-pidx="${i}" class="pchk">
-        <span>${item.nome}</span>
-        ${tagCategoria}
-      `;
+      div.innerHTML =
+        '<input type="checkbox" checked data-pidx="' + i + '" class="pchk">' +
+        '<span>' + item.nome + '</span>' +
+        tagCategoria;
       wrap.appendChild(div);
     });
     container.innerHTML = "";
@@ -619,7 +769,7 @@
       const item = itensPendentes[idx];
       if (item) {
         const categoria = item.categoria || categoriaFallback;
-        dados.push({ nome: item.nome, categoria, checked: false, qtd: 1, preco: 0 });
+        dados.push({ nome: item.nome, categoria: categoria, checked: false, qtd: 1, preco: 0 });
       }
     });
     salvar();
@@ -630,7 +780,6 @@
   function renderizar() {
     listaEl.innerHTML = "";
 
-    // agrupa por categoria, respeitando a ordem definida em CATEGORIAS
     const porCategoria = {};
     dados.forEach((item, idxOriginal) => {
       const cat = item.categoria || "Outros";
@@ -643,7 +792,7 @@
     categoriasComItens.forEach(cat => {
       const titulo = document.createElement("div");
       titulo.className = "categoria-titulo";
-      titulo.textContent = cat;
+      titulo.innerHTML = ICONE_ESPIGA + '<span>' + cat + '</span>';
       listaEl.appendChild(titulo);
 
       const ul = document.createElement("ul");
@@ -655,22 +804,21 @@
 
         const subtotal = (item.qtd * item.preco) || 0;
 
-        li.innerHTML = `
-          <input type="checkbox" ${item.checked ? "checked" : ""} data-idx="${i}" class="chk">
-          <span class="nome" data-idx="${i}" title="Clique para editar">${item.nome}</span>
-          <div class="campos">
-            <div class="campo-grupo">
-              <span>Qtd</span>
-              <input type="number" class="qtd" min="1" step="1" value="${item.qtd}" data-idx="${i}">
-            </div>
-            <div class="campo-grupo">
-              <span>R$</span>
-              <input type="number" class="preco" min="0" step="0.01" placeholder="0,00" value="${item.preco || ""}" data-idx="${i}">
-            </div>
-            <span class="subtotal" id="sub${i}">R$ ${subtotal.toFixed(2).replace(".", ",")}</span>
-            <button class="remover" data-idx="${i}" title="Remover item">✕</button>
-          </div>
-        `;
+        li.innerHTML =
+          '<input type="checkbox" ' + (item.checked ? "checked" : "") + ' data-idx="' + i + '" class="chk">' +
+          '<span class="nome" data-idx="' + i + '" title="Clique para editar">' + item.nome + '</span>' +
+          '<div class="campos">' +
+            '<div class="campo-grupo">' +
+              '<span>Qtd</span>' +
+              '<input type="number" class="qtd" min="1" step="1" value="' + item.qtd + '" data-idx="' + i + '">' +
+            '</div>' +
+            '<div class="campo-grupo">' +
+              '<span>R$</span>' +
+              '<input type="number" class="preco" min="0" step="0.01" placeholder="0,00" value="' + (item.preco || "") + '" data-idx="' + i + '">' +
+            '</div>' +
+            '<span class="subtotal" id="sub' + i + '">R$ ' + subtotal.toFixed(2).replace(".", ",") + '</span>' +
+            '<button class="remover" data-idx="' + i + '" title="Remover item">✕</button>' +
+          '</div>';
         ul.appendChild(li);
       });
 
@@ -761,8 +909,8 @@
   function atualizarSubtotal(idx) {
     const item = dados[idx];
     const subtotal = (item.qtd * item.preco) || 0;
-    const el = document.getElementById(`sub${idx}`);
-    if (el) el.textContent = `R$ ${subtotal.toFixed(2).replace(".", ",")}`;
+    const el = document.getElementById("sub" + idx);
+    if (el) el.textContent = "R$ " + subtotal.toFixed(2).replace(".", ",");
   }
 
   function atualizarTotal() {
@@ -775,7 +923,7 @@
       }
     });
     document.getElementById("total").textContent = total.toFixed(2).replace(".", ",");
-    document.getElementById("contagem").textContent = `${marcados} de ${dados.length} marcados`;
+    document.getElementById("contagem").textContent = marcados + " de " + dados.length + " marcados";
   }
 
   function adicionarItem() {
@@ -783,7 +931,7 @@
     const nome = input.value.trim();
     if (!nome) return;
     const categoria = selectCategoria.value;
-    dados.push({ nome, categoria, checked: false, qtd: 1, preco: 0 });
+    dados.push({ nome: nome, categoria: categoria, checked: false, qtd: 1, preco: 0 });
     input.value = "";
     salvar();
     renderizar();
@@ -808,6 +956,15 @@
     salvar();
     renderizar();
   }
+
+  document.addEventListener("click", (e) => {
+    const menu = document.getElementById("menuMais");
+    const dentroMenu = menu.contains(e.target);
+    const botaoMais = e.target.closest(".action-btn");
+    if (!dentroMenu && !(botaoMais && botaoMais.textContent.includes("Mais"))) {
+      menu.classList.remove("aberto");
+    }
+  });
 
   renderizar();
 
