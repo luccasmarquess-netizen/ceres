@@ -350,6 +350,7 @@
 <div id="lista"></div>
 
 <button class="reset-btn" onclick="desmarcarTudo()">Desmarcar todos (nova compra)</button>
+<button class="reset-btn" onclick="novaListaZerada()" style="border-color:#ef4444; color:#ef4444;">🗑️ Nova lista (apagar tudo)</button>
 
 <div class="footer-info">Marque, ajuste quantidade e valor unitário — o subtotal e total somam automático. Clique no nome do item para editar. Tudo fica salvo no seu navegador.</div>
 
@@ -794,6 +795,16 @@
 
   function desmarcarTudo() {
     dados.forEach(item => item.checked = false);
+    salvar();
+    renderizar();
+  }
+
+  function novaListaZerada() {
+    const confirmar = window.confirm(
+      "Isso vai APAGAR todos os itens da lista atual, sem volta. Tem certeza?"
+    );
+    if (!confirmar) return;
+    dados = [];
     salvar();
     renderizar();
   }
