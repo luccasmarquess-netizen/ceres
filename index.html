@@ -245,6 +245,15 @@
     padding: 2px 4px;
     flex-shrink: 0;
   }
+  .substituir {
+    background: none;
+    border: none;
+    color: var(--trigo);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 2px 6px;
+    flex-shrink: 0;
+  }
   .footer-info {
     margin-top: 18px;
     font-size: 0.8rem;
@@ -539,6 +548,7 @@
 </div>
 
 <div class="mais-menu" id="menuMais">
+  <button onclick="buscarListaInicial(); alternarMenuMais();">🏠 Primeira compra de casa (não sei por onde começar)</button>
   <button onclick="desmarcarTudo(); alternarMenuMais();">Desmarcar todos (nova compra)</button>
   <button class="perigo" onclick="novaListaZerada(); alternarMenuMais();">Apagar tudo e começar do zero</button>
 </div>
@@ -566,7 +576,8 @@
   <div class="modal">
     <h2>Ajuda a escolher</h2>
     <p style="font-size:0.9rem; color:var(--creme-fosco); margin-top:0;">O que você quer saber? Ex: "quero uma proteína barata e rápida" ou "não sei o que levar de legumes pra semana".</p>
-    <input type="text" id="inputPerguntaIA" placeholder="Digite sua dúvida..." style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid var(--linha); background:var(--solo); color:var(--creme); font-family:inherit; font-size:0.95rem; margin-bottom:14px;">
+    <input type="text" id="inputPerguntaIA" placeholder="Digite sua dúvida..." style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid var(--linha); background:var(--solo); color:var(--creme); font-family:inherit; font-size:0.95rem; margin-bottom:10px;">
+    <input type="number" id="inputOrcamentoIA" placeholder="Orçamento máximo em R$ (opcional)" min="0" step="1" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid var(--linha); background:var(--solo); color:var(--creme); font-family:inherit; font-size:0.95rem; margin-bottom:14px;">
     <div class="modal-rodape">
       <button class="btn-confirmar" onclick="enviarPerguntaIA()">Perguntar</button>
       <button class="btn-cancelar" onclick="fecharModalPergunta()">Cancelar</button>
@@ -580,6 +591,10 @@
     <p style="font-size:0.9rem; color:var(--creme-fosco); margin-top:0;">Diga uma proteína, o que já tem em casa, ou os dois — a IA sugere pratos e você adiciona só o que falta.</p>
     <input type="text" id="inputReceitaProteina" placeholder="Proteína principal (opcional): frango, carne moída..." style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid var(--linha); background:var(--solo); color:var(--creme); font-family:inherit; font-size:0.95rem; margin-bottom:10px;">
     <textarea id="inputItensCasa" placeholder="O que você já tem em casa (opcional). Um item por linha ou separado por vírgula: cebola, alho, arroz..." style="width:100%; min-height:70px; padding:11px 14px; border-radius:10px; border:1px solid var(--linha); background:var(--solo); color:var(--creme); font-family:inherit; font-size:0.9rem; margin-bottom:10px; resize:vertical;"></textarea>
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+      <span style="font-size:0.85rem; color:var(--creme-fosco);">Pra quantas pessoas?</span>
+      <input type="number" id="inputPessoasReceita" value="4" min="1" step="1" style="width:64px; padding:8px; border-radius:8px; border:1px solid var(--linha); background:var(--solo); color:var(--creme); font-family:inherit;">
+    </div>
     <div class="modal-acoes-topo">
       <button onclick="buscarReceitas()">Buscar pratos</button>
     </div>
@@ -587,6 +602,18 @@
     <div id="receitasContainer"></div>
     <div class="modal-rodape">
       <button class="btn-cancelar" onclick="fecharModalReceitas()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalSubstituto">
+  <div class="modal">
+    <h2>Não achei esse item</h2>
+    <p style="font-size:0.9rem; color:var(--creme-fosco); margin-top:0;" id="substitutoContexto"></p>
+    <div class="modal-status" id="substitutoStatus"></div>
+    <div id="substitutoResultado" style="font-size:0.95rem; margin-bottom:14px;"></div>
+    <div class="modal-rodape">
+      <button class="btn-cancelar" onclick="fecharModalSubstituto()">Fechar</button>
     </div>
   </div>
 </div>
@@ -697,8 +724,9 @@
   // Troque WORKER_URL pela URL do seu Worker publicado.
   // Se você configurou CERES_APP_KEY no Worker, cole a mesma senha em CERES_APP_KEY_LOCAL
   // (serve só pra evitar abuso casual de quem descobrir a URL do Worker, não é segurança forte).
-  const WORKER_URL = "https://ceresapi.luccasmarquess.workers.dev/";
-  const CERES_APP_KEY_LOCAL = "ceres2026";
+  const WORKER_URL = "https://COLE_A_URL_DO_SEU_WORKER_AQUI.workers.dev";
+  const CERES_APP_KEY_LOCAL = "";
+
   function obterChaveAPI() {
     return Promise.resolve(true);
   }
@@ -706,6 +734,7 @@
   async function abrirAssistenteIA() {
     fecharMenuMais();
     document.getElementById("inputPerguntaIA").value = "";
+    document.getElementById("inputOrcamentoIA").value = "";
     document.getElementById("modalPerguntaIA").classList.add("aberto");
     document.getElementById("inputPerguntaIA").focus();
   }
@@ -721,6 +750,7 @@
   async function enviarPerguntaIA() {
     const pergunta = document.getElementById("inputPerguntaIA").value.trim();
     if (!pergunta) return;
+    const orcamento = document.getElementById("inputOrcamentoIA").value.trim();
     document.getElementById("modalPerguntaIA").classList.remove("aberto");
 
     const chave = await obterChaveAPI();
@@ -731,6 +761,11 @@
     document.getElementById("textoImportacao").value = "";
     document.getElementById("previewContainer").innerHTML = "";
     status.textContent = "Pensando em sugestões...";
+
+    let restricaoOrcamento = "";
+    if (orcamento) {
+      restricaoOrcamento = " A pessoa tem um orçamento máximo de R$" + orcamento + " no total. Sugira itens que caibam dentro desse valor, e coloque o preço médio estimado de cada item entre parênteses junto do nome, por exemplo \"Arroz 5kg (~R$25)\".";
+    }
 
     try {
       const resposta = await fetch(WORKER_URL, {
@@ -745,7 +780,7 @@
           messages: [
             {
               role: "user",
-              content: "Você ajuda alguém indeciso a montar uma lista de compras de mercado no Brasil. Pergunta da pessoa: \"" + pergunta + "\". Responda APENAS com uma lista de itens sugeridos, um por linha, no formato \"Nome do item | Categoria\". A categoria deve ser exatamente uma destas: " + CATEGORIAS.join(", ") + ". Sem numeração, sem explicação, sem texto adicional. Máximo 6 itens."
+              content: "Você ajuda alguém indeciso a montar uma lista de compras de mercado no Brasil. Pergunta da pessoa: \"" + pergunta + "\"." + restricaoOrcamento + " Responda APENAS com uma lista de itens sugeridos, um por linha, no formato \"Nome do item | Categoria\". A categoria deve ser exatamente uma destas: " + CATEGORIAS.join(", ") + ". Sem numeração, sem explicação, sem texto adicional. Máximo 6 itens."
             }
           ]
         })
@@ -814,12 +849,16 @@
     itensPendentes.forEach((item, i) => {
       const div = document.createElement("div");
       div.className = "preview-item";
-      const tagCategoria = item.categoria
-        ? '<span style="color:var(--trigo-claro); font-size:0.8rem; margin-left:auto;">' + item.categoria + '</span>'
-        : "";
+      const duplicado = itemJaExisteNaLista(item.nome);
+      const marcadoPadrao = duplicado ? "" : "checked";
+      const tagCategoria = duplicado
+        ? '<span style="color:var(--trigo); font-size:0.8rem; margin-left:auto;">já na lista</span>'
+        : (item.categoria
+            ? '<span style="color:var(--trigo-claro); font-size:0.8rem; margin-left:auto;">' + item.categoria + '</span>'
+            : "");
       div.innerHTML =
-        '<input type="checkbox" checked data-pidx="' + i + '" class="pchk">' +
-        '<span>' + item.nome + '</span>' +
+        '<input type="checkbox" ' + marcadoPadrao + ' data-pidx="' + i + '" class="pchk">' +
+        '<span' + (duplicado ? ' style="opacity:0.6;"' : '') + '>' + item.nome + '</span>' +
         tagCategoria;
       wrap.appendChild(div);
     });
@@ -848,6 +887,7 @@
     fecharMenuMais();
     document.getElementById("inputReceitaProteina").value = "";
     document.getElementById("inputItensCasa").value = "";
+    document.getElementById("inputPessoasReceita").value = "4";
     document.getElementById("receitasStatus").textContent = "";
     document.getElementById("receitasContainer").innerHTML = "";
     document.getElementById("modalReceitas").classList.add("aberto");
@@ -899,6 +939,11 @@
       .trim();
   }
 
+  function itemJaExisteNaLista(nome) {
+    const nomeNormalizado = normalizarTexto(nome);
+    return dados.some(item => normalizarTexto(item.nome) === nomeNormalizado);
+  }
+
   function obterListaItensCasa() {
     const bruto = document.getElementById("inputItensCasa").value;
     return bruto
@@ -923,12 +968,18 @@
 
       const listaIngredientes = receita.ingredientes.map((ing, ii) => {
         const temEmCasa = jaTemEmCasa(ing.nome, itensCasa);
-        const marcadoPadrao = temEmCasa ? "" : "checked";
-        const rotuloExtra = temEmCasa
-          ? '<span class="cat-tag" style="color:var(--trigo);">você já tem</span>'
-          : `<span class="cat-tag">${ing.categoria}</span>`;
+        const duplicado = itemJaExisteNaLista(ing.nome);
+        const marcadoPadrao = (temEmCasa || duplicado) ? "" : "checked";
+        let rotuloExtra;
+        if (duplicado) {
+          rotuloExtra = '<span class="cat-tag" style="color:var(--trigo);">já na lista</span>';
+        } else if (temEmCasa) {
+          rotuloExtra = '<span class="cat-tag" style="color:var(--trigo);">você já tem</span>';
+        } else {
+          rotuloExtra = `<span class="cat-tag">${ing.categoria}</span>`;
+        }
         return `
-          <div class="receita-ingrediente" style="${temEmCasa ? 'opacity:0.6;' : ''}">
+          <div class="receita-ingrediente" style="${(temEmCasa || duplicado) ? 'opacity:0.6;' : ''}">
             <input type="checkbox" ${marcadoPadrao} data-ri="${ri}" data-ii="${ii}" class="receita-ing-chk">
             <span>${ing.nome}</span>
             ${rotuloExtra}
@@ -986,14 +1037,16 @@
     container.innerHTML = "";
     status.textContent = "Buscando pratos...";
 
-    let contexto = "Sugira 3 pratos brasileiros do dia a dia";
+    const pessoas = document.getElementById("inputPessoasReceita").value.trim() || "4";
+
+    let contexto = "Sugira 3 pratos brasileiros do dia a dia para " + pessoas + " pessoa(s)";
     if (proteina) {
       contexto += " usando " + proteina + " como ingrediente principal";
     }
     if (itensCasaTexto) {
       contexto += ". A pessoa já tem em casa os seguintes itens: " + itensCasaTexto + ". Priorize pratos que aproveitem o máximo desses itens, mas pode incluir outros ingredientes que faltam";
     }
-    contexto += ".";
+    contexto += ". Ajuste a quantidade de cada ingrediente para render exatamente " + pessoas + " porção(ões), e inclua essa quantidade junto do nome do ingrediente, por exemplo \"2 cebolas\" ou \"500g carne moída\".";
 
     try {
       const resposta = await fetch(WORKER_URL, {
@@ -1037,6 +1090,119 @@
       receitasAtuais = receitas;
       status.textContent = receitas.length + " prato(s) encontrados. Marque os ingredientes que quiser e adicione à lista.";
       renderizarReceitas(receitas);
+    } catch (err) {
+      status.textContent = "Não consegui falar com a IA agora. Verifique sua internet e tente de novo.";
+      console.error(err);
+    }
+  }
+
+
+  async function buscarListaInicial() {
+    const chave = await obterChaveAPI();
+    if (!chave) return;
+
+    const status = document.getElementById("modalStatus");
+    document.getElementById("modalImportacao").classList.add("aberto");
+    document.getElementById("textoImportacao").value = "";
+    document.getElementById("previewContainer").innerHTML = "";
+    status.textContent = "Montando uma lista básica...";
+
+    try {
+      const resposta = await fetch(WORKER_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Ceres-App-Key": CERES_APP_KEY_LOCAL
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          max_tokens: 500,
+          messages: [
+            {
+              role: "user",
+              content: "A pessoa está montando casa pela primeira vez e não sabe o que é essencial comprar no mercado. Sugira uma lista básica de itens essenciais cobrindo mercearia (tempero básico, arroz, feijão, óleo, etc.), limpeza (o mínimo pra manter a casa limpa) e higiene pessoal. Responda APENAS com os itens, um por linha, no formato \"Nome do item | Categoria\". A categoria deve ser exatamente uma destas: " + CATEGORIAS.join(", ") + ". Sem numeração, sem explicação, sem texto adicional. No máximo 15 itens."
+            }
+          ]
+        })
+      });
+
+      if (!resposta.ok) {
+        const erro = await resposta.text();
+        if (resposta.status === 401) {
+          status.textContent = "Não autorizado pelo Worker. Confira se CERES_APP_KEY_LOCAL no app bate com a variável CERES_APP_KEY configurada no Worker, ou se a chave da Groq no Worker está válida.";
+        } else {
+          status.textContent = "Erro ao consultar a IA: " + resposta.status;
+        }
+        console.error(erro);
+        return;
+      }
+
+      const dadosResposta = await resposta.json();
+      const texto = dadosResposta.choices[0].message.content;
+
+      document.getElementById("textoImportacao").value = texto;
+      status.textContent = "Lista básica gerada. Revise abaixo antes de adicionar.";
+      processarTexto();
+    } catch (err) {
+      status.textContent = "Não consegui falar com a IA agora. Verifique sua internet e tente de novo.";
+      console.error(err);
+    }
+  }
+
+
+  function fecharModalSubstituto() {
+    document.getElementById("modalSubstituto").classList.remove("aberto");
+  }
+
+  async function buscarSubstituto(idx) {
+    const item = dados[idx];
+    if (!item) return;
+
+    const chave = await obterChaveAPI();
+    if (!chave) return;
+
+    document.getElementById("substitutoContexto").textContent = `Não achou "${item.nome}" no mercado? Aqui vão algumas opções:`;
+    document.getElementById("substitutoResultado").innerHTML = "";
+    const status = document.getElementById("substitutoStatus");
+    status.textContent = "Buscando substitutos...";
+    document.getElementById("modalSubstituto").classList.add("aberto");
+
+    try {
+      const resposta = await fetch(WORKER_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Ceres-App-Key": CERES_APP_KEY_LOCAL
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          max_tokens: 200,
+          messages: [
+            {
+              role: "user",
+              content: "A pessoa está no mercado e não achou o item \"" + item.nome + "\" (categoria: " + item.categoria + "). Sugira 2 ou 3 substitutos comuns no Brasil, em uma lista curta, um por linha, sem numeração, sem explicação longa — só o nome do substituto e opcionalmente uma justificativa bem curta entre parênteses."
+            }
+          ]
+        })
+      });
+
+      if (!resposta.ok) {
+        const erro = await resposta.text();
+        if (resposta.status === 401) {
+          status.textContent = "Não autorizado pelo Worker. Confira a configuração da chave.";
+        } else {
+          status.textContent = "Erro ao buscar substituto: " + resposta.status;
+        }
+        console.error(erro);
+        return;
+      }
+
+      const dadosResposta = await resposta.json();
+      const texto = dadosResposta.choices[0].message.content;
+
+      status.textContent = "";
+      document.getElementById("substitutoResultado").innerHTML =
+        texto.split("\n").filter(l => l.trim()).map(l => `<div style="padding:4px 0;">• ${l.trim()}</div>`).join("");
     } catch (err) {
       status.textContent = "Não consegui falar com a IA agora. Verifique sua internet e tente de novo.";
       console.error(err);
@@ -1100,6 +1266,7 @@
               '<input type="number" class="preco" min="0" step="0.01" placeholder="0,00" value="' + (item.preco || "") + '" data-idx="' + i + '">' +
             '</div>' +
             '<span class="subtotal" id="sub' + i + '">R$ ' + subtotal.toFixed(2).replace(".", ",") + '</span>' +
+            '<button class="substituir" data-idx="' + i + '" title="Não achei, sugerir substituto">🔄</button>' +
             '<button class="remover" data-idx="' + i + '" title="Remover item">✕</button>' +
           '</div>';
         ul.appendChild(li);
@@ -1145,9 +1312,20 @@
     document.querySelectorAll(".remover").forEach(el => {
       el.addEventListener("click", e => {
         const idx = e.target.dataset.idx;
+        const item = dados[idx];
+        if (!item) return;
+        const confirmar = window.confirm(`Remover "${item.nome}" da lista?`);
+        if (!confirmar) return;
         dados.splice(idx, 1);
         salvar();
         renderizar();
+      });
+    });
+
+    document.querySelectorAll(".substituir").forEach(el => {
+      el.addEventListener("click", e => {
+        const idx = e.target.dataset.idx;
+        buscarSubstituto(idx);
       });
     });
 
@@ -1213,6 +1391,12 @@
     const input = document.getElementById("novoItem");
     const nome = input.value.trim();
     if (!nome) return;
+
+    if (itemJaExisteNaLista(nome)) {
+      const confirmar = window.confirm(`"${nome}" já está na lista. Adicionar mesmo assim?`);
+      if (!confirmar) return;
+    }
+
     const categoria = selectCategoria.value;
     dados.push({ nome: nome, categoria: categoria, checked: false, qtd: 1, preco: 0 });
     input.value = "";
