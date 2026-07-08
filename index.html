@@ -515,6 +515,30 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modalChaveAPI">
+  <div class="modal">
+    <h2>Conectar com a Groq</h2>
+    <p style="font-size:0.9rem; color:var(--creme-fosco); margin-top:0;">Cole sua chave de API da Groq. Ela fica guardada só neste navegador — nunca é enviada para o GitHub ou para qualquer outro lugar além da própria Groq.</p>
+    <input type="password" id="inputChaveAPI" placeholder="gsk_..." style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid var(--linha); background:var(--solo); color:var(--creme); font-family:inherit; font-size:0.95rem; margin-bottom:14px;">
+    <div class="modal-rodape">
+      <button class="btn-confirmar" onclick="salvarChaveAPI()">Salvar e continuar</button>
+      <button class="btn-cancelar" onclick="fecharModalChave()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalPerguntaIA">
+  <div class="modal">
+    <h2>Ajuda a escolher</h2>
+    <p style="font-size:0.9rem; color:var(--creme-fosco); margin-top:0;">O que você quer saber? Ex: "quero uma proteína barata e rápida" ou "não sei o que levar de legumes pra semana".</p>
+    <input type="text" id="inputPerguntaIA" placeholder="Digite sua dúvida..." style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid var(--linha); background:var(--solo); color:var(--creme); font-family:inherit; font-size:0.95rem; margin-bottom:14px;">
+    <div class="modal-rodape">
+      <button class="btn-confirmar" onclick="enviarPerguntaIA()">Perguntar</button>
+      <button class="btn-cancelar" onclick="fecharModalPergunta()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
 <script>
@@ -619,28 +643,69 @@
   const API_KEY_STORAGE = "ceres_groq_key";
 
   function obterChaveAPI() {
-    let chave = localStorage.getItem(API_KEY_STORAGE);
-    if (!chave) {
-      chave = window.prompt(
-        "Cole sua chave de API da Groq (fica salva só neste navegador, nunca sobe pro GitHub):"
-      );
-      if (chave) {
-        chave = chave.trim();
-        localStorage.setItem(API_KEY_STORAGE, chave);
+    return new Promise((resolve) => {
+      const chaveSalva = localStorage.getItem(API_KEY_STORAGE);
+      if (chaveSalva) {
+        resolve(chaveSalva);
+        return;
       }
-    }
-    return chave;
+      const modal = document.getElementById("modalChaveAPI");
+      const input = document.getElementById("inputChaveAPI");
+      input.value = "";
+      modal.classList.add("aberto");
+      input.focus();
+
+      window._resolverChaveAPI = resolve;
+    });
   }
+
+  function salvarChaveAPI() {
+    const input = document.getElementById("inputChaveAPI");
+    const chave = input.value.trim();
+    document.getElementById("modalChaveAPI").classList.remove("aberto");
+    if (chave) {
+      localStorage.setItem(API_KEY_STORAGE, chave);
+    }
+    if (window._resolverChaveAPI) {
+      window._resolverChaveAPI(chave || null);
+      window._resolverChaveAPI = null;
+    }
+  }
+
+  function fecharModalChave() {
+    document.getElementById("modalChaveAPI").classList.remove("aberto");
+    if (window._resolverChaveAPI) {
+      window._resolverChaveAPI(null);
+      window._resolverChaveAPI = null;
+    }
+  }
+
+  document.getElementById("inputChaveAPI").addEventListener("keydown", e => {
+    if (e.key === "Enter") salvarChaveAPI();
+  });
 
   async function abrirAssistenteIA() {
     fecharMenuMais();
-    const chave = obterChaveAPI();
-    if (!chave) return;
+    document.getElementById("inputPerguntaIA").value = "";
+    document.getElementById("modalPerguntaIA").classList.add("aberto");
+    document.getElementById("inputPerguntaIA").focus();
+  }
 
-    const pergunta = window.prompt(
-      "O que você quer saber? Ex: 'quero uma proteína barata e rápida de preparar' ou 'não sei o que levar de legumes para uma semana'"
-    );
+  function fecharModalPergunta() {
+    document.getElementById("modalPerguntaIA").classList.remove("aberto");
+  }
+
+  document.getElementById("inputPerguntaIA").addEventListener("keydown", e => {
+    if (e.key === "Enter") enviarPerguntaIA();
+  });
+
+  async function enviarPerguntaIA() {
+    const pergunta = document.getElementById("inputPerguntaIA").value.trim();
     if (!pergunta) return;
+    document.getElementById("modalPerguntaIA").classList.remove("aberto");
+
+    const chave = await obterChaveAPI();
+    if (!chave) return;
 
     const status = document.getElementById("modalStatus");
     document.getElementById("modalImportacao").classList.add("aberto");
@@ -671,7 +736,7 @@
         const erro = await resposta.text();
         if (resposta.status === 401) {
           localStorage.removeItem(API_KEY_STORAGE);
-          status.textContent = "Chave inválida ou expirada. Removida — tente novamente e cole uma chave válida.";
+          status.textContent = "Chave inválida ou expirada. Removida — tente de novo em 'Ajuda a escolher' e cole uma chave válida.";
         } else {
           status.textContent = "Erro ao consultar a IA: " + resposta.status;
         }
