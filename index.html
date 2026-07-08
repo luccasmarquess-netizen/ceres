@@ -443,6 +443,49 @@
     background: var(--superficie-alta);
     color: var(--creme-fosco);
   }
+  .receita-card {
+    background: var(--superficie-alta);
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+  .receita-card h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.05rem;
+    color: var(--trigo-claro);
+    margin: 0 0 8px;
+  }
+  .receita-ingrediente {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    font-size: 0.9rem;
+  }
+  .receita-ingrediente input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    accent-color: var(--trigo);
+    margin-top: 0;
+  }
+  .receita-ingrediente .cat-tag {
+    margin-left: auto;
+    color: var(--creme-fosco);
+    font-size: 0.75rem;
+  }
+  .receita-card button {
+    margin-top: 10px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    background: var(--trigo);
+    color: #1c1912;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-family: inherit;
+  }
 </style>
 </head>
 <body>
@@ -484,6 +527,10 @@
   <button class="action-btn" onclick="abrirAssistenteIA()">
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" stroke="#f1e6cf" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="12" r="3" stroke="#f1e6cf" stroke-width="1.5"/></svg>
     Ajuda a escolher
+  </button>
+  <button class="action-btn" onclick="abrirReceitas()">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 3v7a2 2 0 0 0 2 2v9M7 3v7M9 3v7" stroke="#f1e6cf" stroke-width="1.5" stroke-linecap="round"/><path d="M17 3c-1.5 0-2.5 1.5-2.5 4s1 4 1 6v8" stroke="#f1e6cf" stroke-width="1.5" stroke-linecap="round"/></svg>
+    Receitas
   </button>
   <button class="action-btn" onclick="alternarMenuMais()">
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="12" r="1.6" fill="#f1e6cf"/><circle cx="12" cy="12" r="1.6" fill="#f1e6cf"/><circle cx="19" cy="12" r="1.6" fill="#f1e6cf"/></svg>
@@ -535,6 +582,22 @@
     <div class="modal-rodape">
       <button class="btn-confirmar" onclick="enviarPerguntaIA()">Perguntar</button>
       <button class="btn-cancelar" onclick="fecharModalPergunta()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalReceitas">
+  <div class="modal" style="max-width:520px;">
+    <h2>Receitas</h2>
+    <p style="font-size:0.9rem; color:var(--creme-fosco); margin-top:0;">Diga qual carne (ou proteína) você tem em mente, e a IA sugere pratos com os ingredientes prontos pra adicionar na lista.</p>
+    <input type="text" id="inputReceitaProteina" placeholder="Ex: frango, carne moída, tilápia..." style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid var(--linha); background:var(--solo); color:var(--creme); font-family:inherit; font-size:0.95rem; margin-bottom:10px;">
+    <div class="modal-acoes-topo">
+      <button onclick="buscarReceitas()">Buscar pratos</button>
+    </div>
+    <div class="modal-status" id="receitasStatus"></div>
+    <div id="receitasContainer"></div>
+    <div class="modal-rodape">
+      <button class="btn-cancelar" onclick="fecharModalReceitas()">Fechar</button>
     </div>
   </div>
 </div>
@@ -825,6 +888,163 @@
       status.textContent = "Não consegui ler essa imagem. Tente uma foto mais nítida, ou cole o texto manualmente.";
     }
   });
+
+  function abrirReceitas() {
+    fecharMenuMais();
+    document.getElementById("inputReceitaProteina").value = "";
+    document.getElementById("receitasStatus").textContent = "";
+    document.getElementById("receitasContainer").innerHTML = "";
+    document.getElementById("modalReceitas").classList.add("aberto");
+    document.getElementById("inputReceitaProteina").focus();
+  }
+
+  function fecharModalReceitas() {
+    document.getElementById("modalReceitas").classList.remove("aberto");
+  }
+
+  document.getElementById("inputReceitaProteina").addEventListener("keydown", e => {
+    if (e.key === "Enter") buscarReceitas();
+  });
+
+  function interpretarReceitas(textoBruto) {
+    const blocos = textoBruto.split("---").map(b => b.trim()).filter(Boolean);
+    const receitas = [];
+
+    blocos.forEach(bloco => {
+      const linhas = bloco.split("\n").map(l => l.trim()).filter(Boolean);
+      let nomePrato = null;
+      const ingredientes = [];
+
+      linhas.forEach(linha => {
+        if (/^PRATO\s*:/i.test(linha)) {
+          nomePrato = linha.replace(/^PRATO\s*:/i, "").trim();
+        } else if (/^INGREDIENTE\s*:/i.test(linha)) {
+          const conteudo = linha.replace(/^INGREDIENTE\s*:/i, "").trim();
+          const partes = conteudo.split("|").map(p => p.trim());
+          const nome = partes[0];
+          const categoria = (partes[1] && CATEGORIAS.includes(partes[1])) ? partes[1] : "Outros";
+          if (nome) ingredientes.push({ nome, categoria });
+        }
+      });
+
+      if (nomePrato && ingredientes.length > 0) {
+        receitas.push({ nome: nomePrato, ingredientes });
+      }
+    });
+
+    return receitas;
+  }
+
+  function renderizarReceitas(receitas) {
+    const container = document.getElementById("receitasContainer");
+    container.innerHTML = "";
+
+    receitas.forEach((receita, ri) => {
+      const card = document.createElement("div");
+      card.className = "receita-card";
+
+      const listaIngredientes = receita.ingredientes.map((ing, ii) => `
+        <div class="receita-ingrediente">
+          <input type="checkbox" checked data-ri="${ri}" data-ii="${ii}" class="receita-ing-chk">
+          <span>${ing.nome}</span>
+          <span class="cat-tag">${ing.categoria}</span>
+        </div>
+      `).join("");
+
+      card.innerHTML = `
+        <h3>${receita.nome}</h3>
+        ${listaIngredientes}
+        <button onclick="adicionarIngredientesReceita(${ri})">Adicionar ingredientes marcados</button>
+      `;
+
+      container.appendChild(card);
+    });
+  }
+
+  let receitasAtuais = [];
+
+  function adicionarIngredientesReceita(ri) {
+    const receita = receitasAtuais[ri];
+    if (!receita) return;
+
+    const marcados = document.querySelectorAll(`.receita-ing-chk[data-ri="${ri}"]:checked`);
+    let contador = 0;
+    marcados.forEach(chk => {
+      const ii = chk.dataset.ii;
+      const ing = receita.ingredientes[ii];
+      if (ing) {
+        dados.push({ nome: ing.nome, categoria: ing.categoria, checked: false, qtd: 1, preco: 0 });
+        contador++;
+      }
+    });
+    salvar();
+    renderizar();
+
+    const status = document.getElementById("receitasStatus");
+    status.textContent = contador + " ingrediente(s) de \"" + receita.nome + "\" adicionados à lista.";
+  }
+
+  async function buscarReceitas() {
+    const proteina = document.getElementById("inputReceitaProteina").value.trim();
+    if (!proteina) return;
+
+    const chave = await obterChaveAPI();
+    if (!chave) return;
+
+    const status = document.getElementById("receitasStatus");
+    const container = document.getElementById("receitasContainer");
+    container.innerHTML = "";
+    status.textContent = "Buscando pratos...";
+
+    try {
+      const resposta = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + chave
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          max_tokens: 700,
+          messages: [
+            {
+              role: "user",
+              content: "Sugira 3 pratos brasileiros do dia a dia usando " + proteina + " como ingrediente principal. Para CADA prato, responda EXATAMENTE neste formato, sem nenhum texto fora dele:\nPRATO: <nome do prato>\nINGREDIENTE: <nome do ingrediente> | <categoria>\nINGREDIENTE: <nome do ingrediente> | <categoria>\n(liste todos os ingredientes necessários, um por linha)\n---\n(repita o bloco acima para os outros pratos, separando cada prato com uma linha contendo apenas ---)\nA categoria de cada ingrediente deve ser exatamente uma destas: " + CATEGORIAS.join(", ") + "."
+            }
+          ]
+        })
+      });
+
+      if (!resposta.ok) {
+        const erro = await resposta.text();
+        if (resposta.status === 401) {
+          localStorage.removeItem(API_KEY_STORAGE);
+          status.textContent = "Chave inválida ou expirada. Tente de novo e cole uma chave válida.";
+        } else {
+          status.textContent = "Erro ao buscar receitas: " + resposta.status;
+        }
+        console.error(erro);
+        return;
+      }
+
+      const dadosResposta = await resposta.json();
+      const texto = dadosResposta.choices[0].message.content;
+      const receitas = interpretarReceitas(texto);
+
+      if (receitas.length === 0) {
+        status.textContent = "Não consegui organizar pratos a partir da resposta. Tente reformular (ex: 'frango' em vez de 'ave').";
+        return;
+      }
+
+      receitasAtuais = receitas;
+      status.textContent = receitas.length + " prato(s) encontrados. Marque os ingredientes que quiser e adicione à lista.";
+      renderizarReceitas(receitas);
+    } catch (err) {
+      status.textContent = "Não consegui falar com a IA agora. Verifique sua internet e tente de novo.";
+      console.error(err);
+    }
+  }
+
 
   function confirmarImportacao() {
     const categoriaFallback = selectCategoriaImportacao.value;
