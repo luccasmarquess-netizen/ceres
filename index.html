@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ceres - Lista de Mercado</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#111111">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    background: #111;
+    color: #eee;
+    font-family: -apple-system, Roboto, Arial, sans-serif;
+    margin: 0;
+    padding: 16px;
+    padding-bottom: 40px;
+  }
+  h1 {
+    font-size: 1.3rem;
+    margin-bottom: 4px;
+  }
+  .total-bar {
+    position: sticky;
+    top: 0;
+    background: #1c1c1c;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.1rem;
+    z-index: 10;
+  }
+  .total-bar .valor {
+    font-weight: bold;
+    font-size: 1.4rem;
+    color: #4ade80;
+  }
+  .add-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .add-bar input[type="text"] {
+    flex: 1;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background: #1c1c1c;
+    color: #eee;
+    font-size: 1rem;
+    min-width: 120px;
+  }
+  .add-bar select {
+    padding: 10px 8px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background: #1c1c1c;
+    color: #eee;
+    font-size: 0.95rem;
+  }
+  .add-bar button {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    background: #4ade80;
+    color: #111;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .categoria-titulo {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #4ade80;
+    margin: 18px 0 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #2a2a2a;
+  }
+  .categoria-titulo:first-child {
+    margin-top: 0;
+  }
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 6px;
+    border-bottom: 1px solid #2a2a2a;
+    flex-wrap: wrap;
+  }
+  li.checked .nome {
+    text-decoration: line-through;
+    color: #777;
+  }
+  input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    accent-color: #4ade80;
+  }
+  .nome {
+    flex: 1 1 100%;
+    font-size: 1rem;
+    min-width: 90px;
+    cursor: text;
+    padding: 2px 4px;
+    border-radius: 4px;
+  }
+  .nome:hover {
+    background: #1f1f1f;
+  }
+  .nome-input {
+    flex: 1 1 100%;
+    font-size: 1rem;
+    min-width: 90px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    border: 1px solid #4ade80;
+    background: #0f0f0f;
+    color: #eee;
+    font-family: inherit;
+  }
+  .campos {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 30px;
+    flex-wrap: wrap;
+  }
+  .campo-grupo {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .campo-grupo span {
+    color: #999;
+    font-size: 0.85rem;
+  }
+  input[type="number"] {
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #444;
+    background: #0f0f0f;
+    color: #eee;
+    font-size: 0.95rem;
+  }
+  input.qtd {
+    width: 55px;
+  }
+  input.preco {
+    width: 78px;
+  }
+  .subtotal {
+    margin-left: auto;
+    font-size: 0.9rem;
+    color: #4ade80;
+    font-weight: 600;
+    min-width: 70px;
+    text-align: right;
+  }
+  .remover {
+    background: none;
+    border: none;
+    color: #ef4444;
+    font-size: 1.3rem;
+    cursor: pointer;
+    padding: 0 4px;
+    flex-shrink: 0;
+  }
+  .footer-info {
+    margin-top: 16px;
+    font-size: 0.85rem;
+    color: #777;
+    text-align: center;
+  }
+  .reset-btn {
+    display: block;
+    margin: 20px auto 0;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background: #1c1c1c;
+    color: #ccc;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .import-btn {
+    display: inline-block;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background: #1c1c1c;
+    color: #ccc;
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-bottom: 12px;
+    margin-right: 8px;
+  }
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px 12px;
+    overflow-y: auto;
+  }
+  .modal-overlay.aberto {
+    display: flex;
+  }
+  .modal {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 18px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .modal h2 {
+    font-size: 1.05rem;
+    margin: 0 0 12px;
+  }
+  .modal-acoes-topo {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .modal-acoes-topo button, .modal-acoes-topo label {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background: #222;
+    color: #ddd;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: inline-block;
+  }
+  .modal textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background: #0f0f0f;
+    color: #eee;
+    font-family: inherit;
+    font-size: 0.95rem;
+    margin-bottom: 10px;
+    resize: vertical;
+  }
+  .modal-status {
+    font-size: 0.85rem;
+    color: #4ade80;
+    margin-bottom: 8px;
+    min-height: 1.1em;
+  }
+  .preview-lista {
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+  .preview-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-bottom: 1px solid #2a2a2a;
+    font-size: 0.95rem;
+  }
+  .preview-item:last-child {
+    border-bottom: none;
+  }
+  .preview-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #4ade80;
+    flex-shrink: 0;
+  }
+  .modal-rodape {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .modal-rodape select {
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background: #1c1c1c;
+    color: #eee;
+  }
+  .modal-rodape button {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .btn-confirmar {
+    background: #4ade80;
+    color: #111;
+  }
+  .btn-cancelar {
+    background: #333;
+    color: #ccc;
+  }
+</style>
+</head>
+<body>
+
+<h1>🌾 Ceres</h1>
+
+<div class="total-bar">
+  <span id="contagem">0 de 0 marcados</span>
+  <span class="valor">R$ <span id="total">0,00</span></span>
+</div>
+
+<div class="add-bar">
+  <input type="text" id="novoItem" placeholder="Adicionar item...">
+  <select id="novaCategoria"></select>
+  <button onclick="adicionarItem()">+ Add</button>
+</div>
+
+<div>
+  <button class="import-btn" onclick="abrirImportacao()">📷 Foto ou colar lista</button>
+</div>
+
+<div id="lista"></div>
+
+<button class="reset-btn" onclick="desmarcarTudo()">Desmarcar todos (nova compra)</button>
+
+<div class="footer-info">Marque, ajuste quantidade e valor unitário — o subtotal e total somam automático. Clique no nome do item para editar. Tudo fica salvo no seu navegador.</div>
+
+<div class="modal-overlay" id="modalImportacao">
+  <div class="modal">
+    <h2>Importar itens</h2>
+    <div class="modal-acoes-topo">
+      <label for="fotoInput">📷 Tirar foto / escolher imagem</label>
+      <input type="file" id="fotoInput" accept="image/*" capture="environment" style="display:none">
+      <button onclick="processarTexto()">🔎 Processar texto abaixo</button>
+    </div>
+    <div class="modal-status" id="modalStatus"></div>
+    <textarea id="textoImportacao" placeholder="Cole aqui o texto de uma mensagem, ou tire uma foto acima..."></textarea>
+    <div id="previewContainer"></div>
+    <div class="modal-rodape">
+      <select id="categoriaImportacao"></select>
+      <button class="btn-confirmar" onclick="confirmarImportacao()">Adicionar selecionados</button>
+      <button class="btn-cancelar" onclick="fecharImportacao()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<script>
+  const STORAGE_KEY = "lista_mercado_v1";
+
+  const CATEGORIAS = [
+    "Hortifruti",
+    "Açougue",
+    "Laticínios",
+    "Mercearia",
+    "Bebidas",
+    "Limpeza",
+    "Higiene",
+    "Padaria",
+    "Outros"
+  ];
+
+  const itensPadrao = [
+    { nome: "Carne", categoria: "Açougue" },
+    { nome: "Cebola e alho", categoria: "Hortifruti" },
+    { nome: "Repolho", categoria: "Hortifruti" },
+    { nome: "Tomate", categoria: "Hortifruti" },
+    { nome: "Fruta", categoria: "Hortifruti" },
+    { nome: "Papel toalha", categoria: "Limpeza" },
+    { nome: "Desinfetante", categoria: "Limpeza" },
+    { nome: "Pastilha vaso", categoria: "Limpeza" },
+    { nome: "Cif", categoria: "Limpeza" },
+    { nome: "Refri", categoria: "Bebidas" },
+    { nome: "Suco Tang tangerina", categoria: "Bebidas" },
+    { nome: "Lâmpada 15 watts (geladeira)", categoria: "Outros" },
+    { nome: "Bolacha", categoria: "Mercearia" },
+    { nome: "Pão francês", categoria: "Padaria" },
+    { nome: "Manteiga", categoria: "Laticínios" },
+    { nome: "Tapioca", categoria: "Mercearia" },
+    { nome: "Fermento", categoria: "Mercearia" },
+    { nome: "1 cartela de ovo (12 unid.)", categoria: "Laticínios" },
+    { nome: "Legumes (batata)", categoria: "Hortifruti" },
+    { nome: "Pepino", categoria: "Hortifruti" },
+    { nome: "Cenoura", categoria: "Hortifruti" }
+  ];
+
+  function carregarDados() {
+    const salvo = localStorage.getItem(STORAGE_KEY);
+    if (salvo) {
+      try {
+        const parsed = JSON.parse(salvo);
+        // migração: garante que itens antigos sem categoria recebam "Outros"
+        return parsed.map(item => ({ categoria: "Outros", ...item }));
+      } catch (e) { /* segue pro default */ }
+    }
+    return itensPadrao.map(item => ({ ...item, checked: false, qtd: 1, preco: 0 }));
+  }
+
+  let dados = carregarDados();
+
+  function salvar() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
+  }
+
+  const listaEl = document.getElementById("lista");
+  const selectCategoria = document.getElementById("novaCategoria");
+
+  CATEGORIAS.forEach(cat => {
+    const opt = document.createElement("option");
+    opt.value = cat;
+    opt.textContent = cat;
+    selectCategoria.appendChild(opt);
+  });
+
+  const selectCategoriaImportacao = document.getElementById("categoriaImportacao");
+  CATEGORIAS.forEach(cat => {
+    const opt = document.createElement("option");
+    opt.value = cat;
+    opt.textContent = cat;
+    selectCategoriaImportacao.appendChild(opt);
+  });
+
+  let itensPendentes = [];
+
+  function abrirImportacao() {
+    document.getElementById("modalImportacao").classList.add("aberto");
+    document.getElementById("textoImportacao").value = "";
+    document.getElementById("modalStatus").textContent = "";
+    document.getElementById("previewContainer").innerHTML = "";
+    itensPendentes = [];
+  }
+
+  function fecharImportacao() {
+    document.getElementById("modalImportacao").classList.remove("aberto");
+  }
+
+  function limparLinha(linha) {
+    // remove bullets, números de lista, hífens e espaços extras no começo
+    return linha
+      .replace(/^[\s•\-–—*·]+/, "")
+      .replace(/^\d+[\.\)]\s*/, "")
+      .trim();
+  }
+
+  function processarTexto() {
+    const texto = document.getElementById("textoImportacao").value;
+    const linhas = texto
+      .split("\n")
+      .map(limparLinha)
+      .filter(l => l.length > 1);
+
+    itensPendentes = linhas;
+    renderizarPreview();
+  }
+
+  function renderizarPreview() {
+    const container = document.getElementById("previewContainer");
+    if (itensPendentes.length === 0) {
+      container.innerHTML = "";
+      return;
+    }
+    const wrap = document.createElement("div");
+    wrap.className = "preview-lista";
+    itensPendentes.forEach((linha, i) => {
+      const div = document.createElement("div");
+      div.className = "preview-item";
+      div.innerHTML = `
+        <input type="checkbox" checked data-pidx="${i}" class="pchk">
+        <span>${linha}</span>
+      `;
+      wrap.appendChild(div);
+    });
+    container.innerHTML = "";
+    container.appendChild(wrap);
+  }
+
+  document.getElementById("fotoInput").addEventListener("change", async (e) => {
+    const arquivo = e.target.files[0];
+    if (!arquivo) return;
+
+    const status = document.getElementById("modalStatus");
+    status.textContent = "Lendo texto da imagem... isso pode levar alguns segundos.";
+
+    try {
+      const resultado = await Tesseract.recognize(arquivo, "por");
+      document.getElementById("textoImportacao").value = resultado.data.text;
+      status.textContent = "Texto reconhecido. Revise abaixo antes de processar.";
+      processarTexto();
+    } catch (err) {
+      status.textContent = "Não consegui ler essa imagem. Tente uma foto mais nítida, ou cole o texto manualmente.";
+    }
+  });
+
+  function confirmarImportacao() {
+    const categoria = selectCategoriaImportacao.value;
+    const marcados = document.querySelectorAll(".pchk:checked");
+    marcados.forEach(chk => {
+      const idx = chk.dataset.pidx;
+      const nome = itensPendentes[idx];
+      if (nome) {
+        dados.push({ nome, categoria, checked: false, qtd: 1, preco: 0 });
+      }
+    });
+    salvar();
+    renderizar();
+    fecharImportacao();
+  }
+
+  function renderizar() {
+    listaEl.innerHTML = "";
+
+    // agrupa por categoria, respeitando a ordem definida em CATEGORIAS
+    const porCategoria = {};
+    dados.forEach((item, idxOriginal) => {
+      const cat = item.categoria || "Outros";
+      if (!porCategoria[cat]) porCategoria[cat] = [];
+      porCategoria[cat].push(idxOriginal);
+    });
+
+    const categoriasComItens = CATEGORIAS.filter(cat => porCategoria[cat] && porCategoria[cat].length > 0);
+
+    categoriasComItens.forEach(cat => {
+      const titulo = document.createElement("div");
+      titulo.className = "categoria-titulo";
+      titulo.textContent = cat;
+      listaEl.appendChild(titulo);
+
+      const ul = document.createElement("ul");
+
+      porCategoria[cat].forEach(i => {
+        const item = dados[i];
+        const li = document.createElement("li");
+        if (item.checked) li.classList.add("checked");
+
+        const subtotal = (item.qtd * item.preco) || 0;
+
+        li.innerHTML = `
+          <input type="checkbox" ${item.checked ? "checked" : ""} data-idx="${i}" class="chk">
+          <span class="nome" data-idx="${i}" title="Clique para editar">${item.nome}</span>
+          <div class="campos">
+            <div class="campo-grupo">
+              <span>Qtd</span>
+              <input type="number" class="qtd" min="1" step="1" value="${item.qtd}" data-idx="${i}">
+            </div>
+            <div class="campo-grupo">
+              <span>R$</span>
+              <input type="number" class="preco" min="0" step="0.01" placeholder="0,00" value="${item.preco || ""}" data-idx="${i}">
+            </div>
+            <span class="subtotal" id="sub${i}">R$ ${subtotal.toFixed(2).replace(".", ",")}</span>
+            <button class="remover" data-idx="${i}" title="Remover item">✕</button>
+          </div>
+        `;
+        ul.appendChild(li);
+      });
+
+      listaEl.appendChild(ul);
+    });
+
+    ativarListeners();
+    atualizarTotal();
+  }
+
+  function ativarListeners() {
+    document.querySelectorAll(".chk").forEach(el => {
+      el.addEventListener("change", e => {
+        dados[e.target.dataset.idx].checked = e.target.checked;
+        salvar();
+        atualizarTotal();
+        e.target.closest("li").classList.toggle("checked", e.target.checked);
+      });
+    });
+
+    document.querySelectorAll(".qtd").forEach(el => {
+      el.addEventListener("input", e => {
+        const idx = e.target.dataset.idx;
+        dados[idx].qtd = parseFloat(e.target.value) || 0;
+        atualizarSubtotal(idx);
+        salvar();
+        atualizarTotal();
+      });
+    });
+
+    document.querySelectorAll(".preco").forEach(el => {
+      el.addEventListener("input", e => {
+        const idx = e.target.dataset.idx;
+        dados[idx].preco = parseFloat(e.target.value.replace(",", ".")) || 0;
+        atualizarSubtotal(idx);
+        salvar();
+        atualizarTotal();
+      });
+    });
+
+    document.querySelectorAll(".remover").forEach(el => {
+      el.addEventListener("click", e => {
+        const idx = e.target.dataset.idx;
+        dados.splice(idx, 1);
+        salvar();
+        renderizar();
+      });
+    });
+
+    document.querySelectorAll(".nome").forEach(el => {
+      el.addEventListener("click", e => {
+        iniciarEdicaoNome(e.target);
+      });
+    });
+  }
+
+  function iniciarEdicaoNome(spanEl) {
+    const idx = spanEl.dataset.idx;
+    const valorAtual = dados[idx].nome;
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "nome-input";
+    input.value = valorAtual;
+    input.dataset.idx = idx;
+
+    spanEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    function salvarEdicao() {
+      const novoNome = input.value.trim() || valorAtual;
+      dados[idx].nome = novoNome;
+      salvar();
+      renderizar();
+    }
+
+    input.addEventListener("blur", salvarEdicao);
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter") input.blur();
+      if (e.key === "Escape") {
+        dados[idx].nome = valorAtual;
+        renderizar();
+      }
+    });
+  }
+
+  function atualizarSubtotal(idx) {
+    const item = dados[idx];
+    const subtotal = (item.qtd * item.preco) || 0;
+    const el = document.getElementById(`sub${idx}`);
+    if (el) el.textContent = `R$ ${subtotal.toFixed(2).replace(".", ",")}`;
+  }
+
+  function atualizarTotal() {
+    let total = 0;
+    let marcados = 0;
+    dados.forEach(item => {
+      if (item.checked) {
+        marcados++;
+        total += (item.qtd * item.preco) || 0;
+      }
+    });
+    document.getElementById("total").textContent = total.toFixed(2).replace(".", ",");
+    document.getElementById("contagem").textContent = `${marcados} de ${dados.length} marcados`;
+  }
+
+  function adicionarItem() {
+    const input = document.getElementById("novoItem");
+    const nome = input.value.trim();
+    if (!nome) return;
+    const categoria = selectCategoria.value;
+    dados.push({ nome, categoria, checked: false, qtd: 1, preco: 0 });
+    input.value = "";
+    salvar();
+    renderizar();
+  }
+
+  document.getElementById("novoItem").addEventListener("keydown", e => {
+    if (e.key === "Enter") adicionarItem();
+  });
+
+  function desmarcarTudo() {
+    dados.forEach(item => item.checked = false);
+    salvar();
+    renderizar();
+  }
+
+  renderizar();
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("service-worker.js").catch(() => {
+        // silencioso: se falhar, o app segue funcionando normalmente sem cache offline
+      });
+    });
+  }
+</script>
+
+</body>
+</html>
