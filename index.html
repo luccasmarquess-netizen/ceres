@@ -692,12 +692,16 @@
     document.getElementById("menuMais").classList.remove("aberto");
   }
 
-  // ATENÇÃO: chave fixa no código por decisão do usuário — quem tiver o link do app também
-  // consegue ver essa chave pelo "ver código-fonte" do navegador. Troque se notar uso indevido.
-  const CHAVE_GROQ_FIXA = "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";
+  // Chame o Worker Cloudflare em vez da Groq direto — a chave da Groq fica só no
+  // Worker (variável de ambiente secreta), nunca aparece aqui no código do app.
+  // Troque WORKER_URL pela URL do seu Worker publicado.
+  // Se você configurou CERES_APP_KEY no Worker, cole a mesma senha em CERES_APP_KEY_LOCAL
+  // (serve só pra evitar abuso casual de quem descobrir a URL do Worker, não é segurança forte).
+  const WORKER_URL = "https://COLE_A_URL_DO_SEU_WORKER_AQUI.workers.dev";
+  const CERES_APP_KEY_LOCAL = "";
 
   function obterChaveAPI() {
-    return Promise.resolve(CHAVE_GROQ_FIXA);
+    return Promise.resolve(true);
   }
 
   async function abrirAssistenteIA() {
@@ -730,11 +734,11 @@
     status.textContent = "Pensando em sugestões...";
 
     try {
-      const resposta = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      const resposta = await fetch(WORKER_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer " + chave
+          "X-Ceres-App-Key": CERES_APP_KEY_LOCAL
         },
         body: JSON.stringify({
           model: "llama-3.3-70b-versatile",
@@ -751,7 +755,7 @@
       if (!resposta.ok) {
         const erro = await resposta.text();
         if (resposta.status === 401) {
-          status.textContent = "Chave da Groq inválida ou expirada. Foi preciso editar o código-fonte (CHAVE_GROQ_FIXA) com uma chave válida.";
+          status.textContent = "Não autorizado pelo Worker. Confira se CERES_APP_KEY_LOCAL no app bate com a variável CERES_APP_KEY configurada no Worker, ou se a chave da Groq no Worker está válida.";
         } else {
           status.textContent = "Erro ao consultar a IA: " + resposta.status;
         }
@@ -993,11 +997,11 @@
     contexto += ".";
 
     try {
-      const resposta = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      const resposta = await fetch(WORKER_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer " + chave
+          "X-Ceres-App-Key": CERES_APP_KEY_LOCAL
         },
         body: JSON.stringify({
           model: "llama-3.3-70b-versatile",
@@ -1014,7 +1018,7 @@
       if (!resposta.ok) {
         const erro = await resposta.text();
         if (resposta.status === 401) {
-          status.textContent = "Chave da Groq inválida ou expirada. Foi preciso editar o código-fonte (CHAVE_GROQ_FIXA) com uma chave válida.";
+          status.textContent = "Não autorizado pelo Worker. Confira se CERES_APP_KEY_LOCAL no app bate com a variável CERES_APP_KEY configurada no Worker, ou se a chave da Groq no Worker está válida.";
         } else {
           status.textContent = "Erro ao buscar receitas: " + resposta.status;
         }
