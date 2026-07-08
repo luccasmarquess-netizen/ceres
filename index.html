@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ceres - Lista de Mercado</title>
 <link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
 <meta name="theme-color" content="#111111">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="mobile-web-app-capable" content="yes">
@@ -343,6 +344,7 @@
 
 <div>
   <button class="import-btn" onclick="abrirImportacao()">📷 Foto ou colar lista</button>
+  <button class="import-btn" onclick="abrirAssistenteIA()">🤖 Ajuda a escolher</button>
 </div>
 
 <div id="lista"></div>
@@ -459,6 +461,80 @@
 
   function fecharImportacao() {
     document.getElementById("modalImportacao").classList.remove("aberto");
+  }
+
+  const API_KEY_STORAGE = "ceres_groq_key";
+
+  function obterChaveAPI() {
+    let chave = localStorage.getItem(API_KEY_STORAGE);
+    if (!chave) {
+      chave = window.prompt(
+        "Cole sua chave de API da Groq (fica salva só neste navegador, nunca sobe pro GitHub):"
+      );
+      if (chave) {
+        chave = chave.trim();
+        localStorage.setItem(API_KEY_STORAGE, chave);
+      }
+    }
+    return chave;
+  }
+
+  async function abrirAssistenteIA() {
+    const chave = obterChaveAPI();
+    if (!chave) return;
+
+    const pergunta = window.prompt(
+      "O que você quer saber? Ex: 'quero uma proteína barata e rápida de preparar' ou 'não sei o que levar de legumes para uma semana'"
+    );
+    if (!pergunta) return;
+
+    const status = document.getElementById("modalStatus");
+    document.getElementById("modalImportacao").classList.add("aberto");
+    document.getElementById("textoImportacao").value = "";
+    document.getElementById("previewContainer").innerHTML = "";
+    status.textContent = "Pensando em sugestões...";
+
+    try {
+      const resposta = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + chave
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          max_tokens: 300,
+          messages: [
+            {
+              role: "user",
+              content: `Você ajuda alguém indeciso a montar uma lista de compras de mercado no Brasil. Pergunta da pessoa: "${pergunta}". Responda APENAS com uma lista de itens sugeridos, um por linha, sem numeração, sem explicação, sem texto adicional. Máximo 6 itens.`
+            }
+          ]
+        })
+      });
+
+      if (!resposta.ok) {
+        const erro = await resposta.text();
+        if (resposta.status === 401) {
+          localStorage.removeItem(API_KEY_STORAGE);
+          status.textContent = "Chave inválida ou expirada. Removida — tente novamente e cole uma chave válida.";
+        } else {
+          status.textContent = "Erro ao consultar a IA: " + resposta.status;
+        }
+        console.error(erro);
+        return;
+      }
+
+      const dadosResposta = await resposta.json();
+      const texto = dadosResposta.choices[0].message.content;
+
+      document.getElementById("textoImportacao").value = texto;
+      status.textContent = "Sugestões geradas. Revise abaixo antes de adicionar.";
+      processarTexto();
+    } catch (err) {
+      status.textContent = "Não consegui falar com a IA agora. Verifique sua internet e tente de novo.";
+      console.error(err);
+    }
   }
 
   function limparLinha(linha) {

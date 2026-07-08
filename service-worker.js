@@ -1,4 +1,4 @@
-const CACHE_NAME = "lista-mercado-v3";
+const CACHE_NAME = "lista-mercado-v5";
 const ARQUIVOS = [
   "./index.html",
   "./manifest.json",
