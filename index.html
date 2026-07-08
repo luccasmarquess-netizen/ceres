@@ -562,18 +562,6 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="modalChaveAPI">
-  <div class="modal">
-    <h2>Conectar com a Groq</h2>
-    <p style="font-size:0.9rem; color:var(--creme-fosco); margin-top:0;">Cole sua chave de API da Groq. Ela fica guardada só neste navegador — nunca é enviada para o GitHub ou para qualquer outro lugar além da própria Groq.</p>
-    <input type="password" id="inputChaveAPI" placeholder="gsk_..." style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid var(--linha); background:var(--solo); color:var(--creme); font-family:inherit; font-size:0.95rem; margin-bottom:14px;">
-    <div class="modal-rodape">
-      <button class="btn-confirmar" onclick="salvarChaveAPI()">Salvar e continuar</button>
-      <button class="btn-cancelar" onclick="fecharModalChave()">Cancelar</button>
-    </div>
-  </div>
-</div>
-
 <div class="modal-overlay" id="modalPerguntaIA">
   <div class="modal">
     <h2>Ajuda a escolher</h2>
@@ -589,8 +577,9 @@
 <div class="modal-overlay" id="modalReceitas">
   <div class="modal" style="max-width:520px;">
     <h2>Receitas</h2>
-    <p style="font-size:0.9rem; color:var(--creme-fosco); margin-top:0;">Diga qual carne (ou proteína) você tem em mente, e a IA sugere pratos com os ingredientes prontos pra adicionar na lista.</p>
-    <input type="text" id="inputReceitaProteina" placeholder="Ex: frango, carne moída, tilápia..." style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid var(--linha); background:var(--solo); color:var(--creme); font-family:inherit; font-size:0.95rem; margin-bottom:10px;">
+    <p style="font-size:0.9rem; color:var(--creme-fosco); margin-top:0;">Diga uma proteína, o que já tem em casa, ou os dois — a IA sugere pratos e você adiciona só o que falta.</p>
+    <input type="text" id="inputReceitaProteina" placeholder="Proteína principal (opcional): frango, carne moída..." style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid var(--linha); background:var(--solo); color:var(--creme); font-family:inherit; font-size:0.95rem; margin-bottom:10px;">
+    <textarea id="inputItensCasa" placeholder="O que você já tem em casa (opcional). Um item por linha ou separado por vírgula: cebola, alho, arroz..." style="width:100%; min-height:70px; padding:11px 14px; border-radius:10px; border:1px solid var(--linha); background:var(--solo); color:var(--creme); font-family:inherit; font-size:0.9rem; margin-bottom:10px; resize:vertical;"></textarea>
     <div class="modal-acoes-topo">
       <button onclick="buscarReceitas()">Buscar pratos</button>
     </div>
@@ -703,49 +692,13 @@
     document.getElementById("menuMais").classList.remove("aberto");
   }
 
-  const API_KEY_STORAGE = "ceres_groq_key";
+  // ATENÇÃO: chave fixa no código por decisão do usuário — quem tiver o link do app também
+  // consegue ver essa chave pelo "ver código-fonte" do navegador. Troque se notar uso indevido.
+  const CHAVE_GROQ_FIXA = "COLE_SUA_CHAVE_GROQ_AQUI";
 
   function obterChaveAPI() {
-    return new Promise((resolve) => {
-      const chaveSalva = localStorage.getItem(API_KEY_STORAGE);
-      if (chaveSalva) {
-        resolve(chaveSalva);
-        return;
-      }
-      const modal = document.getElementById("modalChaveAPI");
-      const input = document.getElementById("inputChaveAPI");
-      input.value = "";
-      modal.classList.add("aberto");
-      input.focus();
-
-      window._resolverChaveAPI = resolve;
-    });
+    return Promise.resolve(CHAVE_GROQ_FIXA);
   }
-
-  function salvarChaveAPI() {
-    const input = document.getElementById("inputChaveAPI");
-    const chave = input.value.trim();
-    document.getElementById("modalChaveAPI").classList.remove("aberto");
-    if (chave) {
-      localStorage.setItem(API_KEY_STORAGE, chave);
-    }
-    if (window._resolverChaveAPI) {
-      window._resolverChaveAPI(chave || null);
-      window._resolverChaveAPI = null;
-    }
-  }
-
-  function fecharModalChave() {
-    document.getElementById("modalChaveAPI").classList.remove("aberto");
-    if (window._resolverChaveAPI) {
-      window._resolverChaveAPI(null);
-      window._resolverChaveAPI = null;
-    }
-  }
-
-  document.getElementById("inputChaveAPI").addEventListener("keydown", e => {
-    if (e.key === "Enter") salvarChaveAPI();
-  });
 
   async function abrirAssistenteIA() {
     fecharMenuMais();
@@ -798,8 +751,7 @@
       if (!resposta.ok) {
         const erro = await resposta.text();
         if (resposta.status === 401) {
-          localStorage.removeItem(API_KEY_STORAGE);
-          status.textContent = "Chave inválida ou expirada. Removida — tente de novo em 'Ajuda a escolher' e cole uma chave válida.";
+          status.textContent = "Chave da Groq inválida ou expirada. Foi preciso editar o código-fonte (CHAVE_GROQ_FIXA) com uma chave válida.";
         } else {
           status.textContent = "Erro ao consultar a IA: " + resposta.status;
         }
@@ -892,6 +844,7 @@
   function abrirReceitas() {
     fecharMenuMais();
     document.getElementById("inputReceitaProteina").value = "";
+    document.getElementById("inputItensCasa").value = "";
     document.getElementById("receitasStatus").textContent = "";
     document.getElementById("receitasContainer").innerHTML = "";
     document.getElementById("modalReceitas").classList.add("aberto");
@@ -935,21 +888,50 @@
     return receitas;
   }
 
+  function normalizarTexto(txt) {
+    return txt
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+  }
+
+  function obterListaItensCasa() {
+    const bruto = document.getElementById("inputItensCasa").value;
+    return bruto
+      .split(/[\n,]/)
+      .map(item => normalizarTexto(item))
+      .filter(item => item.length > 1);
+  }
+
+  function jaTemEmCasa(nomeIngrediente, itensCasa) {
+    const nomeNormalizado = normalizarTexto(nomeIngrediente);
+    return itensCasa.some(item => nomeNormalizado.includes(item) || item.includes(nomeNormalizado));
+  }
+
   function renderizarReceitas(receitas) {
     const container = document.getElementById("receitasContainer");
     container.innerHTML = "";
+    const itensCasa = obterListaItensCasa();
 
     receitas.forEach((receita, ri) => {
       const card = document.createElement("div");
       card.className = "receita-card";
 
-      const listaIngredientes = receita.ingredientes.map((ing, ii) => `
-        <div class="receita-ingrediente">
-          <input type="checkbox" checked data-ri="${ri}" data-ii="${ii}" class="receita-ing-chk">
-          <span>${ing.nome}</span>
-          <span class="cat-tag">${ing.categoria}</span>
-        </div>
-      `).join("");
+      const listaIngredientes = receita.ingredientes.map((ing, ii) => {
+        const temEmCasa = jaTemEmCasa(ing.nome, itensCasa);
+        const marcadoPadrao = temEmCasa ? "" : "checked";
+        const rotuloExtra = temEmCasa
+          ? '<span class="cat-tag" style="color:var(--trigo);">você já tem</span>'
+          : `<span class="cat-tag">${ing.categoria}</span>`;
+        return `
+          <div class="receita-ingrediente" style="${temEmCasa ? 'opacity:0.6;' : ''}">
+            <input type="checkbox" ${marcadoPadrao} data-ri="${ri}" data-ii="${ii}" class="receita-ing-chk">
+            <span>${ing.nome}</span>
+            ${rotuloExtra}
+          </div>
+        `;
+      }).join("");
 
       card.innerHTML = `
         <h3>${receita.nome}</h3>
@@ -986,7 +968,12 @@
 
   async function buscarReceitas() {
     const proteina = document.getElementById("inputReceitaProteina").value.trim();
-    if (!proteina) return;
+    const itensCasaTexto = document.getElementById("inputItensCasa").value.trim();
+
+    if (!proteina && !itensCasaTexto) {
+      document.getElementById("receitasStatus").textContent = "Preencha a proteína, o que tem em casa, ou os dois.";
+      return;
+    }
 
     const chave = await obterChaveAPI();
     if (!chave) return;
@@ -995,6 +982,15 @@
     const container = document.getElementById("receitasContainer");
     container.innerHTML = "";
     status.textContent = "Buscando pratos...";
+
+    let contexto = "Sugira 3 pratos brasileiros do dia a dia";
+    if (proteina) {
+      contexto += " usando " + proteina + " como ingrediente principal";
+    }
+    if (itensCasaTexto) {
+      contexto += ". A pessoa já tem em casa os seguintes itens: " + itensCasaTexto + ". Priorize pratos que aproveitem o máximo desses itens, mas pode incluir outros ingredientes que faltam";
+    }
+    contexto += ".";
 
     try {
       const resposta = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -1009,7 +1005,7 @@
           messages: [
             {
               role: "user",
-              content: "Sugira 3 pratos brasileiros do dia a dia usando " + proteina + " como ingrediente principal. Para CADA prato, responda EXATAMENTE neste formato, sem nenhum texto fora dele:\nPRATO: <nome do prato>\nINGREDIENTE: <nome do ingrediente> | <categoria>\nINGREDIENTE: <nome do ingrediente> | <categoria>\n(liste todos os ingredientes necessários, um por linha)\n---\n(repita o bloco acima para os outros pratos, separando cada prato com uma linha contendo apenas ---)\nA categoria de cada ingrediente deve ser exatamente uma destas: " + CATEGORIAS.join(", ") + "."
+              content: contexto + " Para CADA prato, responda EXATAMENTE neste formato, sem nenhum texto fora dele:\nPRATO: <nome do prato>\nINGREDIENTE: <nome do ingrediente> | <categoria>\nINGREDIENTE: <nome do ingrediente> | <categoria>\n(liste TODOS os ingredientes necessários da receita, mesmo os que a pessoa possa já ter em casa)\n---\n(repita o bloco acima para os outros pratos, separando cada prato com uma linha contendo apenas ---)\nA categoria de cada ingrediente deve ser exatamente uma destas: " + CATEGORIAS.join(", ") + "."
             }
           ]
         })
@@ -1018,8 +1014,7 @@
       if (!resposta.ok) {
         const erro = await resposta.text();
         if (resposta.status === 401) {
-          localStorage.removeItem(API_KEY_STORAGE);
-          status.textContent = "Chave inválida ou expirada. Tente de novo e cole uma chave válida.";
+          status.textContent = "Chave da Groq inválida ou expirada. Foi preciso editar o código-fonte (CHAVE_GROQ_FIXA) com uma chave válida.";
         } else {
           status.textContent = "Erro ao buscar receitas: " + resposta.status;
         }
