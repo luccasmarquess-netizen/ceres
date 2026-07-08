@@ -365,7 +365,7 @@
     <textarea id="textoImportacao" placeholder="Cole aqui o texto de uma mensagem, ou tire uma foto acima..."></textarea>
     <div id="previewContainer"></div>
     <div class="modal-rodape">
-      <select id="categoriaImportacao"></select>
+      <select id="categoriaImportacao" title="Usada apenas para itens sem categoria detectada"></select>
       <button class="btn-confirmar" onclick="confirmarImportacao()">Adicionar selecionados</button>
       <button class="btn-cancelar" onclick="fecharImportacao()">Cancelar</button>
     </div>
@@ -507,7 +507,7 @@
           messages: [
             {
               role: "user",
-              content: `Você ajuda alguém indeciso a montar uma lista de compras de mercado no Brasil. Pergunta da pessoa: "${pergunta}". Responda APENAS com uma lista de itens sugeridos, um por linha, sem numeração, sem explicação, sem texto adicional. Máximo 6 itens.`
+              content: `Você ajuda alguém indeciso a montar uma lista de compras de mercado no Brasil. Pergunta da pessoa: "${pergunta}". Responda APENAS com uma lista de itens sugeridos, um por linha, no formato "Nome do item | Categoria". A categoria deve ser exatamente uma destas: ${CATEGORIAS.join(", ")}. Sem numeração, sem explicação, sem texto adicional. Máximo 6 itens.`
             }
           ]
         })
@@ -545,12 +545,24 @@
       .trim();
   }
 
+  function interpretarLinha(linhaCrua) {
+    const linha = limparLinha(linhaCrua);
+    if (!linha) return null;
+
+    // reconhece formato "Nome | Categoria" vindo da IA
+    const partes = linha.split("|").map(p => p.trim());
+    if (partes.length === 2 && CATEGORIAS.includes(partes[1])) {
+      return { nome: partes[0], categoria: partes[1] };
+    }
+    return { nome: linha, categoria: null };
+  }
+
   function processarTexto() {
     const texto = document.getElementById("textoImportacao").value;
     const linhas = texto
       .split("\n")
-      .map(limparLinha)
-      .filter(l => l.length > 1);
+      .map(interpretarLinha)
+      .filter(l => l && l.nome.length > 1);
 
     itensPendentes = linhas;
     renderizarPreview();
@@ -564,12 +576,16 @@
     }
     const wrap = document.createElement("div");
     wrap.className = "preview-lista";
-    itensPendentes.forEach((linha, i) => {
+    itensPendentes.forEach((item, i) => {
       const div = document.createElement("div");
       div.className = "preview-item";
+      const tagCategoria = item.categoria
+        ? `<span style="color:#4ade80; font-size:0.8rem; margin-left:auto;">${item.categoria}</span>`
+        : "";
       div.innerHTML = `
         <input type="checkbox" checked data-pidx="${i}" class="pchk">
-        <span>${linha}</span>
+        <span>${item.nome}</span>
+        ${tagCategoria}
       `;
       wrap.appendChild(div);
     });
@@ -595,13 +611,14 @@
   });
 
   function confirmarImportacao() {
-    const categoria = selectCategoriaImportacao.value;
+    const categoriaFallback = selectCategoriaImportacao.value;
     const marcados = document.querySelectorAll(".pchk:checked");
     marcados.forEach(chk => {
       const idx = chk.dataset.pidx;
-      const nome = itensPendentes[idx];
-      if (nome) {
-        dados.push({ nome, categoria, checked: false, qtd: 1, preco: 0 });
+      const item = itensPendentes[idx];
+      if (item) {
+        const categoria = item.categoria || categoriaFallback;
+        dados.push({ nome: item.nome, categoria, checked: false, qtd: 1, preco: 0 });
       }
     });
     salvar();
