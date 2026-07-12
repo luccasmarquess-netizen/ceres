@@ -296,6 +296,29 @@
     height: 22px;
   }
 
+  @media (max-width: 380px) {
+    .action-bar {
+      padding: 8px 2px calc(8px + env(safe-area-inset-bottom));
+    }
+    .action-btn {
+      font-size: 0.6rem;
+      padding: 5px 4px;
+      gap: 2px;
+      white-space: nowrap;
+    }
+    .action-btn svg {
+      width: 19px;
+      height: 19px;
+    }
+  }
+
+  @media (max-width: 340px) {
+    .action-btn {
+      font-size: 0.55rem;
+      padding: 4px 2px;
+    }
+  }
+
   .mais-menu {
     position: fixed;
     bottom: 70px;
@@ -518,6 +541,10 @@
   <span class="valor">R$ <span id="total">0,00</span></span>
 </div>
 
+<div id="orcamentoBarra" style="display:none; margin:-10px 0 16px; padding:8px 18px; font-size:0.85rem; text-align:right; cursor:pointer;" title="Clique para remover o orçamento definido" onclick="limparOrcamento()">
+  <span id="orcamentoTexto"></span>
+</div>
+
 <div class="add-bar">
   <input type="text" id="novoItem" placeholder="Adicionar item...">
   <select id="novaCategoria"></select>
@@ -531,11 +558,11 @@
 <div class="action-bar">
   <button class="action-btn" onclick="abrirImportacao()">
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z" stroke="#f1e6cf" stroke-width="1.5" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="3" stroke="#f1e6cf" stroke-width="1.5"/></svg>
-    Foto / colar
+    Importar
   </button>
   <button class="action-btn" onclick="abrirAssistenteIA()">
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" stroke="#f1e6cf" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="12" r="3" stroke="#f1e6cf" stroke-width="1.5"/></svg>
-    Ajuda a escolher
+    Ideias
   </button>
   <button class="action-btn" onclick="abrirReceitas()">
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 3v7a2 2 0 0 0 2 2v9M7 3v7M9 3v7" stroke="#f1e6cf" stroke-width="1.5" stroke-linecap="round"/><path d="M17 3c-1.5 0-2.5 1.5-2.5 4s1 4 1 6v8" stroke="#f1e6cf" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -622,6 +649,7 @@
 
 <script>
   const STORAGE_KEY = "lista_mercado_v1";
+  const ORCAMENTO_STORAGE_KEY = "ceres_orcamento";
 
   const ICONE_ESPIGA = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3 L12 20" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M12 5 L8.5 7 M12 5 L15.5 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M12 8.3 L8 10.6 M12 8.3 L16 10.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M12 11.6 L8 13.9 M12 11.6 L16 13.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
 
@@ -793,6 +821,7 @@
     let restricaoOrcamento = "";
     if (orcamento) {
       restricaoOrcamento = " A pessoa tem um orçamento máximo de R$" + orcamento + " no total. Sugira itens que caibam dentro desse valor, e coloque o preço médio estimado de cada item entre parênteses junto do nome, por exemplo \"Arroz 5kg (~R$25)\".";
+      salvarOrcamento(orcamento);
     }
 
     const prompt = "Você ajuda alguém indeciso a montar uma lista de compras de mercado no Brasil. Pergunta da pessoa: \"" + pergunta + "\"." + restricaoOrcamento + " Responda APENAS com uma lista de itens sugeridos, um por linha, no formato \"Nome do item | Categoria\". A categoria deve ser exatamente uma destas: " + CATEGORIAS.join(", ") + ". Sem numeração, sem explicação, sem texto adicional. Máximo 6 itens.";
@@ -1337,6 +1366,26 @@
     if (el) el.textContent = "R$ " + subtotal.toFixed(2).replace(".", ",");
   }
 
+  function carregarOrcamento() {
+    const bruto = localStorage.getItem(ORCAMENTO_STORAGE_KEY);
+    const valor = bruto ? parseFloat(bruto) : null;
+    return (valor && !isNaN(valor)) ? valor : null;
+  }
+
+  function salvarOrcamento(valorTexto) {
+    const valor = parseFloat(valorTexto.replace(",", "."));
+    if (valor && !isNaN(valor)) {
+      localStorage.setItem(ORCAMENTO_STORAGE_KEY, valor);
+    }
+  }
+
+  function limparOrcamento() {
+    const confirmar = window.confirm("Remover o orçamento definido? A lista continua igual, só para de comparar com o teto de gasto.");
+    if (!confirmar) return;
+    localStorage.removeItem(ORCAMENTO_STORAGE_KEY);
+    atualizarTotal();
+  }
+
   function atualizarTotal() {
     let total = 0;
     let marcados = 0;
@@ -1348,6 +1397,22 @@
     });
     document.getElementById("total").textContent = total.toFixed(2).replace(".", ",");
     document.getElementById("contagem").textContent = marcados + " de " + dados.length + " marcados";
+
+    const orcamento = carregarOrcamento();
+    const barraOrcamento = document.getElementById("orcamentoBarra");
+    const textoOrcamento = document.getElementById("orcamentoTexto");
+    if (orcamento) {
+      const estourou = total > orcamento;
+      barraOrcamento.style.display = "block";
+      textoOrcamento.style.color = estourou ? "var(--ferrugem-clara)" : "var(--trigo-claro)";
+      const totalFmt = total.toFixed(2).replace(".", ",");
+      const orcamentoFmt = orcamento.toFixed(2).replace(".", ",");
+      textoOrcamento.textContent = estourou
+        ? "⚠ R$" + totalFmt + " de R$" + orcamentoFmt + " (estourou o orçamento)"
+        : "R$" + totalFmt + " de R$" + orcamentoFmt + " do orçamento";
+    } else {
+      barraOrcamento.style.display = "none";
+    }
   }
 
   function adicionarItem() {
