@@ -637,30 +637,6 @@
     "Outros"
   ];
 
-  const itensPadrao = [
-    { nome: "Carne", categoria: "Açougue" },
-    { nome: "Cebola e alho", categoria: "Hortifruti" },
-    { nome: "Repolho", categoria: "Hortifruti" },
-    { nome: "Tomate", categoria: "Hortifruti" },
-    { nome: "Fruta", categoria: "Hortifruti" },
-    { nome: "Papel toalha", categoria: "Limpeza" },
-    { nome: "Desinfetante", categoria: "Limpeza" },
-    { nome: "Pastilha vaso", categoria: "Limpeza" },
-    { nome: "Cif", categoria: "Limpeza" },
-    { nome: "Refri", categoria: "Bebidas" },
-    { nome: "Suco Tang tangerina", categoria: "Bebidas" },
-    { nome: "Lâmpada 15 watts (geladeira)", categoria: "Outros" },
-    { nome: "Bolacha", categoria: "Mercearia" },
-    { nome: "Pão francês", categoria: "Padaria" },
-    { nome: "Manteiga", categoria: "Laticínios" },
-    { nome: "Tapioca", categoria: "Mercearia" },
-    { nome: "Fermento", categoria: "Mercearia" },
-    { nome: "1 cartela de ovo (12 unid.)", categoria: "Laticínios" },
-    { nome: "Legumes (batata)", categoria: "Hortifruti" },
-    { nome: "Pepino", categoria: "Hortifruti" },
-    { nome: "Cenoura", categoria: "Hortifruti" }
-  ];
-
   function carregarDados() {
     const salvo = localStorage.getItem(STORAGE_KEY);
     if (salvo) {
@@ -669,7 +645,7 @@
         return parsed.map(item => ({ categoria: "Outros", ...item }));
       } catch (e) { /* segue pro default */ }
     }
-    return itensPadrao.map(item => ({ ...item, checked: false, qtd: 1, preco: 0 }));
+    return [];
   }
 
   let dados = carregarDados();
@@ -910,21 +886,35 @@
       const linhas = bloco.split("\n").map(l => l.trim()).filter(Boolean);
       let nomePrato = null;
       const ingredientes = [];
+      const linhasPreparo = [];
+      let dentroDoPreparo = false;
 
       linhas.forEach(linha => {
         if (/^PRATO\s*:/i.test(linha)) {
           nomePrato = linha.replace(/^PRATO\s*:/i, "").trim();
+          dentroDoPreparo = false;
         } else if (/^INGREDIENTE\s*:/i.test(linha)) {
           const conteudo = linha.replace(/^INGREDIENTE\s*:/i, "").trim();
           const partes = conteudo.split("|").map(p => p.trim());
           const nome = partes[0];
           const categoria = (partes[1] && CATEGORIAS.includes(partes[1])) ? partes[1] : "Outros";
           if (nome) ingredientes.push({ nome, categoria });
+          dentroDoPreparo = false;
+        } else if (/^MODO_PREPARO\s*:/i.test(linha)) {
+          const primeiraLinha = linha.replace(/^MODO_PREPARO\s*:/i, "").trim();
+          if (primeiraLinha) linhasPreparo.push(primeiraLinha);
+          dentroDoPreparo = true;
+        } else if (dentroDoPreparo) {
+          linhasPreparo.push(linha);
         }
       });
 
       if (nomePrato && ingredientes.length > 0) {
-        receitas.push({ nome: nomePrato, ingredientes });
+        receitas.push({
+          nome: nomePrato,
+          ingredientes,
+          preparo: linhasPreparo.join(" ").trim()
+        });
       }
     });
 
@@ -987,10 +977,25 @@
         `;
       }).join("");
 
+      const linkBusca = "https://www.google.com/search?q=" + encodeURIComponent("receita " + receita.nome);
+
+      const blocoPreparo = receita.preparo
+        ? `
+          <details style="margin-top:10px;">
+            <summary style="cursor:pointer; color:var(--trigo); font-size:0.85rem;">Ver modo de preparo</summary>
+            <p style="font-size:0.88rem; color:var(--creme-fosco); margin:8px 0 0; line-height:1.5;">${receita.preparo}</p>
+          </details>
+        `
+        : "";
+
       card.innerHTML = `
         <h3>${receita.nome}</h3>
         ${listaIngredientes}
-        <button onclick="adicionarIngredientesReceita(${ri})">Adicionar ingredientes marcados</button>
+        ${blocoPreparo}
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+          <button onclick="adicionarIngredientesReceita(${ri})">Adicionar ingredientes marcados</button>
+          <a href="${linkBusca}" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; padding:8px 14px; border-radius:8px; border:1px solid var(--linha); color:var(--creme-fosco); font-size:0.85rem; text-decoration:none;">🔎 Ver receita completa</a>
+        </div>
       `;
 
       container.appendChild(card);
@@ -1046,7 +1051,7 @@
     if (itensCasaTexto) {
       contexto += ". A pessoa já tem em casa os seguintes itens: " + itensCasaTexto + ". Priorize pratos que aproveitem o máximo desses itens, mas pode incluir outros ingredientes que faltam";
     }
-    contexto += ". Ajuste a quantidade de cada ingrediente para render exatamente " + pessoas + " porção(ões), e inclua essa quantidade junto do nome do ingrediente, por exemplo \"2 cebolas\" ou \"500g carne moída\".";
+    contexto += ". IMPORTANTE: esta lista vai ser usada para COMPRAR no mercado, não para cozinhar. Nunca use medidas de preparo culinário como xícara, colher de sopa, colher de chá ou copo — use a unidade que se compra de fato: quilos ou gramas (arroz, carne, farinha), litros ou ml (óleo, leite), unidades (cebola, ovos, limão), pacotes ou embalagens padrão de mercado (macarrão 500g, feijão 1kg). Quando a quantidade exata da receita for pequena (por exemplo, precisa de só uma pitada de um tempero), ainda assim indique a menor embalagem padrão vendida no mercado para esse item, já que não se compra a granel. Ajuste as quantidades para render " + pessoas + " porção(ões), e inclua a quantidade (na unidade de compra) junto do nome do ingrediente, por exemplo \"1kg de arroz\" ou \"500g de carne moída\" ou \"3 cebolas\".";
 
     try {
       const resposta = await fetch(WORKER_URL, {
@@ -1057,11 +1062,11 @@
         },
         body: JSON.stringify({
           model: "llama-3.3-70b-versatile",
-          max_tokens: 700,
+          max_tokens: 1100,
           messages: [
             {
               role: "user",
-              content: contexto + " Para CADA prato, responda EXATAMENTE neste formato, sem nenhum texto fora dele:\nPRATO: <nome do prato>\nINGREDIENTE: <nome do ingrediente> | <categoria>\nINGREDIENTE: <nome do ingrediente> | <categoria>\n(liste TODOS os ingredientes necessários da receita, mesmo os que a pessoa possa já ter em casa)\n---\n(repita o bloco acima para os outros pratos, separando cada prato com uma linha contendo apenas ---)\nA categoria de cada ingrediente deve ser exatamente uma destas: " + CATEGORIAS.join(", ") + "."
+              content: contexto + " Para CADA prato, responda EXATAMENTE neste formato, sem nenhum texto fora dele:\nPRATO: <nome do prato>\nINGREDIENTE: <nome do ingrediente> | <categoria>\nINGREDIENTE: <nome do ingrediente> | <categoria>\n(liste TODOS os ingredientes necessários da receita, mesmo os que a pessoa possa já ter em casa)\nMODO_PREPARO: <resumo curto do passo a passo de preparo, em 3 a 5 frases, direto ao ponto>\n---\n(repita o bloco acima para os outros pratos, separando cada prato com uma linha contendo apenas ---)\nA categoria de cada ingrediente deve ser exatamente uma destas: " + CATEGORIAS.join(", ") + "."
             }
           ]
         })
@@ -1228,6 +1233,18 @@
 
   function renderizar() {
     listaEl.innerHTML = "";
+
+    if (dados.length === 0) {
+      const vazio = document.createElement("div");
+      vazio.style.cssText = "text-align:center; padding:40px 16px; color:var(--creme-fosco);";
+      vazio.innerHTML = `
+        <p style="margin:0 0 6px; font-family:'Fraunces', serif; font-style:italic; font-size:1.2rem; color:var(--trigo-claro);">Sua lista está vazia</p>
+        <p style="margin:0; font-size:0.9rem;">Adicione um item acima, tire uma foto de uma lista, ou peça sugestões de receitas.</p>
+      `;
+      listaEl.appendChild(vazio);
+      atualizarTotal();
+      return;
+    }
 
     const porCategoria = {};
     dados.forEach((item, idxOriginal) => {
