@@ -707,6 +707,61 @@
     return Promise.resolve(true);
   }
 
+  // Função única que centraliza toda chamada à IA (via Worker). Consolidar aqui evita
+  // ter que editar o mesmo bloco de fetch/erro em 4 lugares diferentes do código sempre
+  // que algo mudar (modelo, timeout, tratamento de erro).
+  async function chamarGroq(promptTexto, opcoes) {
+    opcoes = opcoes || {};
+    const maxTokens = opcoes.maxTokens || 500;
+    const onDemorando = opcoes.onDemorando || null;
+
+    const controller = new AbortController();
+    const timeoutAbort = setTimeout(() => controller.abort(), 20000);
+    let avisoTimer = null;
+    if (onDemorando) {
+      avisoTimer = setTimeout(onDemorando, 8000);
+    }
+
+    try {
+      const resposta = await fetch(WORKER_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Ceres-App-Key": CERES_APP_KEY_LOCAL
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          max_tokens: maxTokens,
+          messages: [{ role: "user", content: promptTexto }]
+        })
+      });
+
+      if (!resposta.ok) {
+        const erroTexto = await resposta.text();
+        console.error(erroTexto);
+        if (resposta.status === 401) {
+          throw new Error("Não autorizado pelo Worker. Confira se CERES_APP_KEY_LOCAL no app bate com a variável CERES_APP_KEY configurada no Worker, ou se a chave da Groq no Worker está válida.");
+        }
+        throw new Error("Erro ao consultar a IA: " + resposta.status);
+      }
+
+      const dadosResposta = await resposta.json();
+      return dadosResposta.choices[0].message.content;
+    } catch (err) {
+      if (err.name === "AbortError") {
+        throw new Error("A IA demorou demais pra responder (mais de 20 segundos). Tente de novo em instantes.");
+      }
+      if (err.message && err.message.startsWith("Não autorizado") || err.message && err.message.startsWith("Erro ao consultar")) {
+        throw err;
+      }
+      throw new Error("Não consegui falar com a IA agora. Verifique sua internet e tente de novo.");
+    } finally {
+      clearTimeout(timeoutAbort);
+      if (avisoTimer) clearTimeout(avisoTimer);
+    }
+  }
+
   async function abrirAssistenteIA() {
     fecharMenuMais();
     document.getElementById("inputPerguntaIA").value = "";
@@ -729,9 +784,6 @@
     const orcamento = document.getElementById("inputOrcamentoIA").value.trim();
     document.getElementById("modalPerguntaIA").classList.remove("aberto");
 
-    const chave = await obterChaveAPI();
-    if (!chave) return;
-
     const status = document.getElementById("modalStatus");
     document.getElementById("modalImportacao").classList.add("aberto");
     document.getElementById("textoImportacao").value = "";
@@ -743,44 +795,18 @@
       restricaoOrcamento = " A pessoa tem um orçamento máximo de R$" + orcamento + " no total. Sugira itens que caibam dentro desse valor, e coloque o preço médio estimado de cada item entre parênteses junto do nome, por exemplo \"Arroz 5kg (~R$25)\".";
     }
 
+    const prompt = "Você ajuda alguém indeciso a montar uma lista de compras de mercado no Brasil. Pergunta da pessoa: \"" + pergunta + "\"." + restricaoOrcamento + " Responda APENAS com uma lista de itens sugeridos, um por linha, no formato \"Nome do item | Categoria\". A categoria deve ser exatamente uma destas: " + CATEGORIAS.join(", ") + ". Sem numeração, sem explicação, sem texto adicional. Máximo 6 itens.";
+
     try {
-      const resposta = await fetch(WORKER_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Ceres-App-Key": CERES_APP_KEY_LOCAL
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          max_tokens: 300,
-          messages: [
-            {
-              role: "user",
-              content: "Você ajuda alguém indeciso a montar uma lista de compras de mercado no Brasil. Pergunta da pessoa: \"" + pergunta + "\"." + restricaoOrcamento + " Responda APENAS com uma lista de itens sugeridos, um por linha, no formato \"Nome do item | Categoria\". A categoria deve ser exatamente uma destas: " + CATEGORIAS.join(", ") + ". Sem numeração, sem explicação, sem texto adicional. Máximo 6 itens."
-            }
-          ]
-        })
+      const texto = await chamarGroq(prompt, {
+        maxTokens: 300,
+        onDemorando: () => { status.textContent = "Está demorando mais que o esperado, aguarde..."; }
       });
-
-      if (!resposta.ok) {
-        const erro = await resposta.text();
-        if (resposta.status === 401) {
-          status.textContent = "Não autorizado pelo Worker. Confira se CERES_APP_KEY_LOCAL no app bate com a variável CERES_APP_KEY configurada no Worker, ou se a chave da Groq no Worker está válida.";
-        } else {
-          status.textContent = "Erro ao consultar a IA: " + resposta.status;
-        }
-        console.error(erro);
-        return;
-      }
-
-      const dadosResposta = await resposta.json();
-      const texto = dadosResposta.choices[0].message.content;
-
       document.getElementById("textoImportacao").value = texto;
       status.textContent = "Sugestões geradas. Revise abaixo antes de adicionar.";
       processarTexto();
     } catch (err) {
-      status.textContent = "Não consegui falar com a IA agora. Verifique sua internet e tente de novo.";
+      status.textContent = err.message;
       console.error(err);
     }
   }
@@ -847,6 +873,12 @@
     if (!arquivo) return;
 
     const status = document.getElementById("modalStatus");
+
+    if (typeof Tesseract === "undefined") {
+      status.textContent = "O leitor de texto da imagem não carregou (provavelmente falta de internet no momento em que a página abriu). Recarregue a página com internet ativa e tente de novo, ou cole o texto manualmente.";
+      return;
+    }
+
     status.textContent = "Lendo texto da imagem... isso pode levar alguns segundos.";
 
     try {
@@ -1034,9 +1066,6 @@
       return;
     }
 
-    const chave = await obterChaveAPI();
-    if (!chave) return;
-
     const status = document.getElementById("receitasStatus");
     const container = document.getElementById("receitasContainer");
     container.innerHTML = "";
@@ -1053,38 +1082,13 @@
     }
     contexto += ". IMPORTANTE: esta lista vai ser usada para COMPRAR no mercado, não para cozinhar. Nunca use medidas de preparo culinário como xícara, colher de sopa, colher de chá ou copo — use a unidade que se compra de fato: quilos ou gramas (arroz, carne, farinha), litros ou ml (óleo, leite), unidades (cebola, ovos, limão), pacotes ou embalagens padrão de mercado (macarrão 500g, feijão 1kg). Quando a quantidade exata da receita for pequena (por exemplo, precisa de só uma pitada de um tempero), ainda assim indique a menor embalagem padrão vendida no mercado para esse item, já que não se compra a granel. Ajuste as quantidades para render " + pessoas + " porção(ões), e inclua a quantidade (na unidade de compra) junto do nome do ingrediente, por exemplo \"1kg de arroz\" ou \"500g de carne moída\" ou \"3 cebolas\".";
 
+    const prompt = contexto + " Para CADA prato, responda EXATAMENTE neste formato, sem nenhum texto fora dele:\nPRATO: <nome do prato>\nINGREDIENTE: <nome do ingrediente> | <categoria>\nINGREDIENTE: <nome do ingrediente> | <categoria>\n(liste TODOS os ingredientes necessários da receita, mesmo os que a pessoa possa já ter em casa)\nMODO_PREPARO: <resumo curto do passo a passo de preparo, em 3 a 5 frases, direto ao ponto>\n---\n(repita o bloco acima para os outros pratos, separando cada prato com uma linha contendo apenas ---)\nA categoria de cada ingrediente deve ser exatamente uma destas: " + CATEGORIAS.join(", ") + ".";
+
     try {
-      const resposta = await fetch(WORKER_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Ceres-App-Key": CERES_APP_KEY_LOCAL
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          max_tokens: 1100,
-          messages: [
-            {
-              role: "user",
-              content: contexto + " Para CADA prato, responda EXATAMENTE neste formato, sem nenhum texto fora dele:\nPRATO: <nome do prato>\nINGREDIENTE: <nome do ingrediente> | <categoria>\nINGREDIENTE: <nome do ingrediente> | <categoria>\n(liste TODOS os ingredientes necessários da receita, mesmo os que a pessoa possa já ter em casa)\nMODO_PREPARO: <resumo curto do passo a passo de preparo, em 3 a 5 frases, direto ao ponto>\n---\n(repita o bloco acima para os outros pratos, separando cada prato com uma linha contendo apenas ---)\nA categoria de cada ingrediente deve ser exatamente uma destas: " + CATEGORIAS.join(", ") + "."
-            }
-          ]
-        })
+      const texto = await chamarGroq(prompt, {
+        maxTokens: 1100,
+        onDemorando: () => { status.textContent = "Está demorando mais que o esperado, aguarde..."; }
       });
-
-      if (!resposta.ok) {
-        const erro = await resposta.text();
-        if (resposta.status === 401) {
-          status.textContent = "Não autorizado pelo Worker. Confira se CERES_APP_KEY_LOCAL no app bate com a variável CERES_APP_KEY configurada no Worker, ou se a chave da Groq no Worker está válida.";
-        } else {
-          status.textContent = "Erro ao buscar receitas: " + resposta.status;
-        }
-        console.error(erro);
-        return;
-      }
-
-      const dadosResposta = await resposta.json();
-      const texto = dadosResposta.choices[0].message.content;
       const receitas = interpretarReceitas(texto);
 
       if (receitas.length === 0) {
@@ -1096,60 +1100,31 @@
       status.textContent = receitas.length + " prato(s) encontrados. Marque os ingredientes que quiser e adicione à lista.";
       renderizarReceitas(receitas);
     } catch (err) {
-      status.textContent = "Não consegui falar com a IA agora. Verifique sua internet e tente de novo.";
+      status.textContent = err.message;
       console.error(err);
     }
   }
 
 
   async function buscarListaInicial() {
-    const chave = await obterChaveAPI();
-    if (!chave) return;
-
     const status = document.getElementById("modalStatus");
     document.getElementById("modalImportacao").classList.add("aberto");
     document.getElementById("textoImportacao").value = "";
     document.getElementById("previewContainer").innerHTML = "";
     status.textContent = "Montando uma lista básica...";
 
+    const prompt = "A pessoa está montando casa pela primeira vez e não sabe o que é essencial comprar no mercado. Sugira uma lista básica de itens essenciais cobrindo: mercearia (tempero básico, arroz, feijão, óleo, etc.), açougue/proteína (pelo menos 2-3 opções básicas de carne, frango ou ovos para o dia a dia), hortifruti (itens básicos que duram bem, tipo cebola, alho, batata), laticínios (leite, queijo, manteiga), limpeza (o mínimo pra manter a casa limpa) e higiene pessoal. Responda APENAS com os itens, um por linha, no formato \"Nome do item | Categoria\". A categoria deve ser exatamente uma destas: " + CATEGORIAS.join(", ") + ". Sem numeração, sem explicação, sem texto adicional. No máximo 20 itens.";
+
     try {
-      const resposta = await fetch(WORKER_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Ceres-App-Key": CERES_APP_KEY_LOCAL
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          max_tokens: 650,
-          messages: [
-            {
-              role: "user",
-              content: "A pessoa está montando casa pela primeira vez e não sabe o que é essencial comprar no mercado. Sugira uma lista básica de itens essenciais cobrindo: mercearia (tempero básico, arroz, feijão, óleo, etc.), açougue/proteína (pelo menos 2-3 opções básicas de carne, frango ou ovos para o dia a dia), hortifruti (itens básicos que duram bem, tipo cebola, alho, batata), laticínios (leite, queijo, manteiga), limpeza (o mínimo pra manter a casa limpa) e higiene pessoal. Responda APENAS com os itens, um por linha, no formato \"Nome do item | Categoria\". A categoria deve ser exatamente uma destas: " + CATEGORIAS.join(", ") + ". Sem numeração, sem explicação, sem texto adicional. No máximo 20 itens."
-            }
-          ]
-        })
+      const texto = await chamarGroq(prompt, {
+        maxTokens: 650,
+        onDemorando: () => { status.textContent = "Está demorando mais que o esperado, aguarde..."; }
       });
-
-      if (!resposta.ok) {
-        const erro = await resposta.text();
-        if (resposta.status === 401) {
-          status.textContent = "Não autorizado pelo Worker. Confira se CERES_APP_KEY_LOCAL no app bate com a variável CERES_APP_KEY configurada no Worker, ou se a chave da Groq no Worker está válida.";
-        } else {
-          status.textContent = "Erro ao consultar a IA: " + resposta.status;
-        }
-        console.error(erro);
-        return;
-      }
-
-      const dadosResposta = await resposta.json();
-      const texto = dadosResposta.choices[0].message.content;
-
       document.getElementById("textoImportacao").value = texto;
       status.textContent = "Lista básica gerada. Revise abaixo antes de adicionar.";
       processarTexto();
     } catch (err) {
-      status.textContent = "Não consegui falar com a IA agora. Verifique sua internet e tente de novo.";
+      status.textContent = err.message;
       console.error(err);
     }
   }
@@ -1163,53 +1138,24 @@
     const item = dados[idx];
     if (!item) return;
 
-    const chave = await obterChaveAPI();
-    if (!chave) return;
-
     document.getElementById("substitutoContexto").textContent = `Não achou "${item.nome}" no mercado? Aqui vão algumas opções:`;
     document.getElementById("substitutoResultado").innerHTML = "";
     const status = document.getElementById("substitutoStatus");
     status.textContent = "Buscando substitutos...";
     document.getElementById("modalSubstituto").classList.add("aberto");
 
+    const prompt = "A pessoa está no mercado e não achou o item \"" + item.nome + "\" (categoria: " + item.categoria + "). Sugira 2 ou 3 substitutos comuns no Brasil, em uma lista curta, um por linha, sem numeração, sem explicação longa — só o nome do substituto e opcionalmente uma justificativa bem curta entre parênteses.";
+
     try {
-      const resposta = await fetch(WORKER_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Ceres-App-Key": CERES_APP_KEY_LOCAL
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          max_tokens: 200,
-          messages: [
-            {
-              role: "user",
-              content: "A pessoa está no mercado e não achou o item \"" + item.nome + "\" (categoria: " + item.categoria + "). Sugira 2 ou 3 substitutos comuns no Brasil, em uma lista curta, um por linha, sem numeração, sem explicação longa — só o nome do substituto e opcionalmente uma justificativa bem curta entre parênteses."
-            }
-          ]
-        })
+      const texto = await chamarGroq(prompt, {
+        maxTokens: 200,
+        onDemorando: () => { status.textContent = "Está demorando mais que o esperado, aguarde..."; }
       });
-
-      if (!resposta.ok) {
-        const erro = await resposta.text();
-        if (resposta.status === 401) {
-          status.textContent = "Não autorizado pelo Worker. Confira a configuração da chave.";
-        } else {
-          status.textContent = "Erro ao buscar substituto: " + resposta.status;
-        }
-        console.error(erro);
-        return;
-      }
-
-      const dadosResposta = await resposta.json();
-      const texto = dadosResposta.choices[0].message.content;
-
       status.textContent = "";
       document.getElementById("substitutoResultado").innerHTML =
         texto.split("\n").filter(l => l.trim()).map(l => `<div style="padding:4px 0;">• ${l.trim()}</div>`).join("");
     } catch (err) {
-      status.textContent = "Não consegui falar com a IA agora. Verifique sua internet e tente de novo.";
+      status.textContent = err.message;
       console.error(err);
     }
   }
